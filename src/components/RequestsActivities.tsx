@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Plus, X, FileText, ClipboardList, CheckCircle2, XCircle,
-  Pencil, Trash2, ChevronDown, Calendar, Filter
+  Pencil, Trash2, ChevronDown, Calendar, Filter, Search
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -48,6 +48,7 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
   const [form, setForm] = useState<FormData>({ ...emptyForm });
   const [saving, setSaving] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'request' | 'activity'>('all');
+  const [searchTerm, setSearchTerm] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   useEffect(() => {
@@ -144,9 +145,15 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
     }
   };
 
-  const filtered = filterType === 'all'
-    ? records
-    : records.filter(r => r.type === filterType);
+  const filtered = records.filter(r => {
+    if (filterType !== 'all' && r.type !== filterType) return false;
+    if (!searchTerm.trim()) return true;
+    const term = searchTerm.toLocaleLowerCase('tr-TR');
+    return (
+      r.description.toLocaleLowerCase('tr-TR').includes(term) ||
+      (r.result_description || '').toLocaleLowerCase('tr-TR').includes(term)
+    );
+  });
 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -177,25 +184,45 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
         </button>
       </div>
 
-      {/* Filter */}
-      <div className="flex items-center gap-2">
-        <Filter size={16} className="text-slate-400" />
-        <div className="flex bg-white border border-slate-200 rounded-xl overflow-hidden">
-          {(['all', 'activity', 'request'] as const).map(t => (
-            <button
-              key={t}
-              onClick={() => setFilterType(t)}
-              className={`px-4 py-2 text-sm font-semibold transition-colors ${
-                filterType === t
-                  ? 'bg-blue-600 text-white'
-                  : 'text-slate-500 hover:bg-slate-50'
-              }`}
-            >
-              {t === 'all' ? 'Tumu' : t === 'activity' ? 'Faaliyetler' : 'Talepler'}
-            </button>
-          ))}
+      {/* Filter & Search */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Filter size={16} className="text-slate-400" />
+          <div className="flex bg-white border border-slate-200 rounded-xl overflow-hidden">
+            {(['all', 'activity', 'request'] as const).map(t => (
+              <button
+                key={t}
+                onClick={() => setFilterType(t)}
+                className={`px-4 py-2 text-sm font-semibold transition-colors ${
+                  filterType === t
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-500 hover:bg-slate-50'
+                }`}
+              >
+                {t === 'all' ? 'Tumu' : t === 'activity' ? 'Faaliyetler' : 'Talepler'}
+              </button>
+            ))}
+          </div>
         </div>
-        <span className="ml-auto text-xs text-slate-400 font-medium">
+        <div className="relative flex-1 w-full sm:max-w-xs">
+          <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+            placeholder="Kayıtlarda ara..."
+            className="w-full pl-10 pr-9 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+          />
+          {searchTerm && (
+            <button
+              onClick={() => setSearchTerm('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+        <span className="text-xs text-slate-400 font-medium whitespace-nowrap">
           {filtered.length} kayıt
         </span>
       </div>
