@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { List, X, FileText, Calendar, Users } from 'lucide-react';
+import { List, X, FileText, Calendar, Users, ClipboardList } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AuthSession } from '../lib/auth';
 
@@ -10,8 +10,9 @@ interface DashboardProps {
 
 export default function NewDashboard({ session, onLogout }: DashboardProps) {
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ 
-    activeMembers: 0, totalIncome: 0, totalExpense: 0, totalBalance: 0 
+  const [stats, setStats] = useState({
+    activeMembers: 0, totalIncome: 0, totalExpense: 0, totalBalance: 0,
+    totalRequests: 0, totalActivities: 0, positiveRequests: 0
   });
   
   const [showReportModal, setShowReportModal] = useState(false);
@@ -52,20 +53,27 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
   const loadStats = async () => {
     try {
       setLoading(true);
-      // 'status' yerine şemanızdaki 'is_active' alanını kullanıyoruz
-      const [m, transactions] = await Promise.all([
+      const [m, transactions, reqAct] = await Promise.all([
         supabase.from('members').select('id', { count: 'exact', head: true }).eq('is_active', true),
-        fetchAllData('transactions', 'type, amount') 
+        fetchAllData('transactions', 'type, amount'),
+        fetchAllData('requests_activities', 'type, result_status')
       ]);
 
       const inc = transactions.filter(x => x.type === 'income').reduce((s, x) => s + Number(x.amount), 0);
       const exp = transactions.filter(x => x.type === 'expense').reduce((s, x) => s + Number(x.amount), 0);
 
+      const requests = reqAct.filter(r => r.type === 'request');
+      const activities = reqAct.filter(r => r.type === 'activity');
+      const positiveReqs = requests.filter(r => r.result_status === 'positive');
+
       setStats({
         activeMembers: m.count || 0,
         totalIncome: inc,
         totalExpense: exp,
-        totalBalance: inc - exp
+        totalBalance: inc - exp,
+        totalRequests: requests.length,
+        totalActivities: activities.length,
+        positiveRequests: positiveReqs.length
       });
     } finally {
       setLoading(false);
@@ -79,11 +87,12 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
       const endOfMonth = new Date(reportDate.year, reportDate.month, 0).toISOString().split('T')[0];
       const startOfYear = `${reportDate.year}-01-01`;
 
-      const [monthlyTransactions, yearlyTransactions, allTransactions, newMembers] = await Promise.all([
+      const [monthlyTransactions, yearlyTransactions, allTransactions, newMembers, allRequestsActivities] = await Promise.all([
         fetchAllData('transactions', 'type, amount, category_id, member_id, description, transaction_categories(name)', { column: 'transaction_date', gte: startOfMonth, lte: endOfMonth }),
         fetchAllData('transactions', 'type, amount, category_id, member_id, description, transaction_categories(name)', { column: 'transaction_date', gte: startOfYear, lte: endOfMonth }),
         fetchAllData('transactions', 'type, amount, category_id, member_id, description, transaction_categories(name)', { column: 'transaction_date', lte: endOfMonth }),
-        fetchAllData('members', 'full_name', { column: 'registration_date', gte: startOfMonth, lte: endOfMonth })
+        fetchAllData('members', 'full_name', { column: 'registration_date', gte: startOfMonth, lte: endOfMonth }),
+        fetchAllData('requests_activities', 'type, result_status', {})
       ]);
 
       const processData = (data: any[]) => {
@@ -106,11 +115,19 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
         return res;
       };
 
+      const allRequests = allRequestsActivities.filter((r: any) => r.type === 'request');
+      const positiveReqs = allRequests.filter((r: any) => r.result_status === 'positive');
+
       setReportData({
         monthly: processData(monthlyTransactions),
         yearly: processData(yearlyTransactions),
         allTime: processData(allTransactions),
-        newMembers: newMembers.map(m => m.full_name)
+        newMembers: newMembers.map(m => m.full_name),
+        requestStats: {
+          total: allRequests.length,
+          positive: positiveReqs.length,
+          percentage: allRequests.length > 0 ? Math.round((positiveReqs.length / allRequests.length) * 100) : 0
+        }
       });
     } finally {
       setReportLoading(false);
@@ -121,7 +138,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 relative pb-20">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
         <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-emerald-500">
           <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Toplam Gelir</p>
           <p className="text-2xl font-black text-emerald-600">{formatCurrency(stats.totalIncome)} TL</p>
@@ -137,6 +154,11 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
         <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-amber-500">
           <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Aktif Üye Sayısı</p>
           <p className="text-2xl font-black text-slate-800">{stats.activeMembers}</p>
+        </div>
+        <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-cyan-500">
+          <p className="text-slate-500 text-xs font-bold uppercase tracking-wider">Talepler / Faaliyetler</p>
+          <p className="text-2xl font-black text-slate-800">{stats.totalRequests + stats.totalActivities}</p>
+          <p className="text-xs text-slate-400 mt-1">{stats.totalRequests} talep, {stats.totalActivities} faaliyet</p>
         </div>
       </div>
 
@@ -199,6 +221,11 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                     <span className="font-bold"> {formatCurrency(reportData.allTime.aidat + reportData.allTime.bagis + reportData.allTime.digerGelir)} TL</span> olmuş; 
                     yapılan tüm yardımların toplam tutarı <span className="font-bold"> {formatCurrency(reportData.allTime.sosyalYardim + reportData.allTime.egitimYardim + reportData.allTime.digerYardim)} TL</span>'ye ulaşmıştır. 
                     Bu süreçte toplam <span className="font-bold">{reportData.allTime.sosyalKisiler.size + reportData.allTime.egitimKisiler.size}</span> farklı ihtiyaç sahibine el uzatılmıştır."
+                    {reportData.requestStats && reportData.requestStats.total > 0 && (
+                      <p className="mt-3">
+                        "Ayrıca bugüne kadar derneğimize toplam <span className="font-bold">{reportData.requestStats.total}</span> adet talep gelmiş ve bunların <span className="font-bold">{reportData.requestStats.positive}</span> tanesi (<span className="font-bold">%{reportData.requestStats.percentage}</span>) olumlu sonuçlanmıştır."
+                      </p>
+                    )}
                   </div>
 
                   {/* 4. ÜYELİK DURUMU */}
