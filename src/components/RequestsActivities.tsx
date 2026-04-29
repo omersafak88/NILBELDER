@@ -11,6 +11,7 @@ interface RequestActivity {
   description: string;
   result_status: 'positive' | 'negative' | null;
   result_description: string | null;
+  event_date: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -26,13 +27,17 @@ type FormData = {
   description: string;
   result_status: 'positive' | 'negative' | null;
   result_description: string;
+  event_date: string;
 };
+
+const todayStr = () => new Date().toISOString().split('T')[0];
 
 const emptyForm: FormData = {
   type: 'activity',
   description: '',
   result_status: null,
   result_description: '',
+  event_date: todayStr(),
 };
 
 export default function RequestsActivities({ isAdmin, currentMemberId }: Props) {
@@ -78,6 +83,7 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
       description: rec.description,
       result_status: rec.result_status,
       result_description: rec.result_description || '',
+      event_date: rec.event_date || todayStr(),
     });
     setEditingId(rec.id);
     setShowForm(true);
@@ -98,6 +104,7 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
         description: form.description.trim(),
         result_status: form.type === 'request' ? form.result_status : null,
         result_description: form.type === 'request' ? (form.result_description.trim() || null) : null,
+        event_date: form.event_date || null,
       };
 
       if (editingId) {
@@ -242,7 +249,7 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
                         )}
                         <span className="flex items-center gap-1 text-[11px] text-slate-400">
                           <Calendar size={11} />
-                          {formatDate(rec.created_at)}
+                          {rec.event_date ? formatDate(rec.event_date) : formatDate(rec.created_at)}
                         </span>
                       </div>
                       <p className="mt-2 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{rec.description}</p>
@@ -334,6 +341,20 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
                     <ClipboardList size={16} />
                     Talep
                   </button>
+                </div>
+              </div>
+
+              {/* Date */}
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tarih</label>
+                <div className="relative">
+                  <Calendar size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="date"
+                    value={form.event_date}
+                    onChange={e => setForm({ ...form, event_date: e.target.value })}
+                    className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                  />
                 </div>
               </div>
 
