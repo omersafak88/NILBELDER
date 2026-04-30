@@ -137,7 +137,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
 
   return (
     <div className="space-y-8 p-4 bg-slate-50 min-h-screen print:bg-white print:p-0">
-      {/* Üst İstatistikler */}
+      {/* Üst Kartlar */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 print:hidden">
         {[
           { label: 'Toplam Gelir', val: `${formatCurrency(stats.totalIncome)} TL`, color: 'border-l-emerald-500', text: 'text-emerald-600' },
@@ -160,8 +160,8 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
         </div>
       </div>
 
-      <button onClick={() => setShowReportModal(true)} className="fixed bottom-8 right-8 z-40 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-full shadow-2xl font-bold flex items-center gap-3 print:hidden">
-        <FileText size={24} /> Faaliyet Raporu Oluştur
+      <button onClick={() => setShowReportModal(true)} className="fixed bottom-8 right-8 z-40 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-full shadow-2xl font-bold flex items-center gap-3 print:hidden transition-all hover:scale-105">
+        <FileText size={24} /> Detaylı Faaliyet Raporu
       </button>
 
       {showReportModal && (
@@ -169,7 +169,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
           <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl max-h-[92vh] overflow-hidden flex flex-col print:shadow-none print:max-h-none print:w-full print:rounded-none">
             {/* Header */}
             <div className="p-6 border-b flex justify-between items-center bg-white print:hidden">
-              <h3 className="text-2xl font-black text-slate-800 uppercase flex items-center gap-3">
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
                 <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><ClipboardList /></div>
                 Kurumsal Raporlama
               </h3>
@@ -197,23 +197,22 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                   </div>
                 </div>
                 <button onClick={generateReport} className="self-end px-12 py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg">
-                   {reportLoading ? 'Hazırlanıyor...' : 'RAPORU OLUŞTUR'}
+                   {reportLoading ? 'İşleniyor...' : 'RAPORU OLUŞTUR'}
                 </button>
               </div>
 
               {reportData && (
                 <div className="space-y-10 print:space-y-6">
-                  {/* Başlık ve Kesme Tarihi - Sayfa başında kalması zorunlu */}
                   <div className="hidden print:block text-center border-b-4 border-slate-900 pb-6 mb-8" style={{ pageBreakAfter: 'avoid' }}>
                     <h1 className="text-4xl font-black uppercase tracking-tighter">NİL-BEL-DER FAALİYET RAPORU</h1>
-                    <p className="text-xl font-bold text-slate-600 mt-2">Düzenleme Tarihi: {reportData.ceilingDate}</p>
+                    <p className="text-xl font-bold text-slate-600 mt-2">Kesme Tarihi: {reportData.ceilingDate}</p>
                   </div>
 
-                  {/* 1. DÖNEMSEL ANALİZ - İçeriği bölme */}
+                  {/* 1. DÖNEMSEL ANALİZ */}
                   <div className="bg-blue-50/40 border-2 border-blue-100 p-8 rounded-3xl" style={{ pageBreakInside: 'avoid' }}>
                     <h4 className="text-blue-900 font-black text-lg mb-4 uppercase underline decoration-2 underline-offset-8">1. Dönemsel Faaliyet Özeti ({reportDate.month}/{reportDate.year})</h4>
                     <div className="space-y-4 text-slate-800 italic text-base">
-                      <p>Derneğimiz, <span className="font-bold">{reportDate.month}/{reportDate.year}</span> döneminde <span className="font-bold text-blue-700">{formatCurrency(reportData.monthly.fin.tGelir)} TL</span> toplam gelir elde etmiştir. Bu tutarın {formatCurrency(reportData.monthly.fin.aidat)} TL'si aidat, {formatCurrency(reportData.monthly.fin.bagis)} TL'si bağış ve {formatCurrency(reportData.monthly.fin.digerGelir)} TL'si diğer kalemlerden oluşmaktadır.</p>
+                      <p>Derneğimiz, <span className="font-bold">{reportDate.month}/{reportDate.year}</span> döneminde <span className="font-bold text-blue-700">{formatCurrency(reportData.monthly.fin.tGelir)} TL</span> toplam gelir elde etmiştir. Bu gelirin {formatCurrency(reportData.monthly.fin.aidat)} TL'si aidat, {formatCurrency(reportData.monthly.fin.bagis)} TL'si bağış ve {formatCurrency(reportData.monthly.fin.digerGelir)} TL'si diğer kalemlerden oluşmaktadır.</p>
                       <p>Aynı dönemde <strong>{reportData.monthly.fin.sKSet.size + reportData.monthly.fin.eKSet.size}</strong> kişiye <strong>{formatCurrency(reportData.monthly.fin.sosyal + reportData.monthly.fin.egitim)} TL</strong> yardım ulaştırılmıştır.</p>
                       <div className="not-italic font-bold bg-white/80 p-4 rounded-xl border border-blue-200 text-blue-800 text-sm">
                         Detay: {reportData.monthly.fin.sKSet.size} kişiye sosyal yardım, {reportData.monthly.fin.eKSet.size} kişiye eğitim yardımı sağlanmıştır. Operasyonel giderler (EFT vb.) {formatCurrency(reportData.monthly.fin.digerGider)} TL'dir.
@@ -222,7 +221,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                     </div>
                   </div>
 
-                  {/* 2. YILLIK ANALİZ - İçeriği bölme */}
+                  {/* 2. YILLIK ANALİZ */}
                   <div className="bg-emerald-50/40 border-2 border-emerald-100 p-8 rounded-3xl" style={{ pageBreakInside: 'avoid' }}>
                     <h4 className="text-emerald-900 font-black text-lg mb-4 uppercase underline decoration-2 underline-offset-8">2. Yıllık Kümülatif Analiz (01.01.{reportDate.year} - {reportData.ceilingDate})</h4>
                     <div className="space-y-4 text-slate-800 italic text-base">
@@ -234,8 +233,8 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                     </div>
                   </div>
 
-                  {/* 3. VERİ KARŞILAŞTIRMA TABLOSU - Bu bölümden önce gerekirse sayfa atla */}
-                  <div className="space-y-4" style={{ pageBreakBefore: 'auto', pageBreakInside: 'avoid' }}>
+                  {/* 3. VERİ KARŞILAŞTIRMA TABLOSU */}
+                  <div className="space-y-4" style={{ pageBreakInside: 'avoid' }}>
                     <h4 className="text-slate-800 font-black text-lg uppercase flex items-center gap-2">
                       <TableIcon className="text-blue-600" /> 3. Karşılaştırmalı Veri Tablosu
                     </h4>
@@ -259,9 +258,13 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                           <tr className="bg-rose-50 font-black border-b"><td className="p-2 pl-4">TOPLAM GİDER</td><td className="p-2 text-center">{formatCurrency(reportData.monthly.fin.tGider)}</td><td className="p-2 text-center">{formatCurrency(reportData.yearly.fin.tGider)}</td><td className="p-2 text-center">{formatCurrency(reportData.allTime.fin.tGider)}</td></tr>
                           
                           <tr className="bg-slate-50 font-bold border-b text-[10px]"><td className="p-2" colSpan={4}>OPERASYONEL KİŞİ SAYILARI</td></tr>
-                          <tr className="border-b"><td className="p-2 pl-4">Sosyal / Eğitim Alan</td><td className="p-2 text-center">{reportData.monthly.fin.sKSet.size} / {reportData.monthly.fin.eKSet.size}</td><td className="p-2 text-center text-emerald-700 font-bold">{reportData.yearly.fin.sKSet.size} / {reportData.yearly.fin.eKSet.size}</td><td className="p-2 text-center text-blue-700 font-bold">{reportData.allTime.fin.sKSet.size} / {reportData.allTime.fin.eKSet.size}</td></tr>
+                          <tr className="border-b"><td className="p-2 pl-4">Sosyal / Eğitim Alanlar</td><td className="p-2 text-center">{reportData.monthly.fin.sKSet.size} / {reportData.monthly.fin.eKSet.size}</td><td className="p-2 text-center text-emerald-700 font-bold">{reportData.yearly.fin.sKSet.size} / {reportData.yearly.fin.eKSet.size}</td><td className="p-2 text-center text-blue-700 font-bold">{reportData.allTime.fin.sKSet.size} / {reportData.allTime.fin.eKSet.size}</td></tr>
                           
                           <tr className="bg-slate-50 font-bold border-b text-[10px]"><td className="p-2" colSpan={4}>PERFORMANS VE TALEPLER</td></tr>
+                          {/* YENİ EKLENEN SATIRLAR */}
+                          <tr className="border-b"><td className="p-2 pl-4">Gelen Toplam Talep Adedi</td><td className="p-2 text-center">{reportData.monthly.req.tReq}</td><td className="p-2 text-center font-bold">{reportData.yearly.req.tReq}</td><td className="p-2 text-center font-bold">{reportData.allTime.req.tReq}</td></tr>
+                          <tr className="border-b"><td className="p-2 pl-4 font-bold text-emerald-700">Olumlu Sonuçlanan Talep</td><td className="p-2 text-center">{reportData.monthly.req.pReq}</td><td className="p-2 text-center font-bold text-emerald-700">{reportData.yearly.req.pReq}</td><td className="p-2 text-center font-bold text-emerald-700">{reportData.allTime.req.pReq}</td></tr>
+                          
                           <tr className="border-b font-bold"><td className="p-2 pl-4">Talep Karşılama Oranı</td><td className="p-2 text-center">%{reportData.monthly.req.perc}</td><td className="p-2 text-center">%{reportData.yearly.req.perc}</td><td className="p-2 text-center">%{reportData.allTime.req.perc}</td></tr>
                           <tr><td className="p-2 pl-4">Faaliyet Adedi</td><td className="p-2 text-center">{reportData.monthly.req.tAct}</td><td className="p-2 text-center">{reportData.yearly.req.tAct}</td><td className="p-2 text-center">{reportData.allTime.req.tAct}</td></tr>
                         </tbody>
@@ -269,11 +272,11 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                     </div>
                   </div>
 
-                  {/* İmza Alanı - Sayfa sonuna itilir */}
+                  {/* İmza Alanı */}
                   <div className="mt-16 border-t-2 border-slate-100 pt-6">
-                    <p className="text-xs italic text-slate-500 mb-10">Bu rapor portal üzerinden otomatik olarak üretilmiştir. Rapor tarihi: {new Date().toLocaleDateString('tr-TR')}</p>
+                    <p className="text-[10px] italic text-slate-500 mb-10">Bu rapor portal üzerinden otomatik olarak üretilmiştir. Rapor tarihi: {new Date().toLocaleDateString('tr-TR')}</p>
                     <div className="hidden print:flex justify-between px-4">
-                      <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">....<br/>Dernek Başkanı</div>
+                      <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">Ömer ŞAFAK<br/>Dernek Başkanı</div>
                       <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">Mali Sekreter</div>
                       <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">Denetleme Kurulu</div>
                     </div>
