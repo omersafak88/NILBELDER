@@ -282,7 +282,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                           <tr className="bg-rose-50 font-black border-b not-italic"><td className="p-2 pl-4 uppercase">Toplam Gider Hacmi</td><td className="p-2 text-center">{formatCurrency(reportData.monthly.fin.tGider)}</td><td className="p-2 text-center">{formatCurrency(reportData.yearly.fin.tGider)}</td><td className="p-2 text-center">{formatCurrency(reportData.allTime.fin.tGider)}</td></tr>
                           
                           <tr className="bg-slate-50 font-bold border-b text-[10px] not-italic"><td className="p-2" colSpan={4}>YARDIM ALICI SAYILARI (BENZERSİZ)</td></tr>
-                          <tr className="border-b"><td className="p-2 pl-4">Sosyal / Eğitim Alanlar</td><td className="p-2 text-center">{reportData.monthly.fin.sKSet.size} / {reportData.monthly.fin.eKSet.size}</td><td className="p-2 text-center text-emerald-700 font-bold">{reportData.yearly.fin.sKSet.size} / {reportData.yearly.fin.eKSet.size}</td><td className="p-2 text-center text-blue-700 font-bold">{reportData.allTime.fin.sKSet.size} / {reportData.allTime.fin.eKSet.size}</td></tr>
+                          <tr className="border-b"><td className="p-2 pl-4">Sosyal / Eğitim Yardımı Alanlar</td><td className="p-2 text-center">{reportData.monthly.fin.sKSet.size} / {reportData.monthly.fin.eKSet.size}</td><td className="p-2 text-center text-emerald-700 font-bold">{reportData.yearly.fin.sKSet.size} / {reportData.yearly.fin.eKSet.size}</td><td className="p-2 text-center text-blue-700 font-bold">{reportData.allTime.fin.sKSet.size} / {reportData.allTime.fin.eKSet.size}</td></tr>
                           <tr className="border-b bg-blue-50 font-black not-italic"><td className="p-2 pl-4 uppercase">Toplam Farklı Kişi</td><td className="p-2 text-center">{reportData.monthly.fin.sKSet.size + reportData.monthly.fin.eKSet.size}</td><td className="p-2 text-center">{reportData.yearly.fin.sKSet.size + reportData.yearly.fin.eKSet.size}</td><td className="p-2 text-center">{reportData.allTime.fin.sKSet.size + reportData.allTime.fin.eKSet.size}</td></tr>
                           
                           <tr className="bg-slate-50 font-bold border-b text-[10px] not-italic"><td className="p-2" colSpan={4}>PERFORMANS VE TALEPLER</td></tr>
@@ -298,7 +298,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                   <div className="mt-12 border-t-2 border-slate-100 pt-6" style={{ pageBreakInside: 'avoid' }}>
                     <p className="text-[10px] italic text-slate-500 mb-10">NİL-BEL-DER Otomatik Raporlama Sistemi | {new Date().toLocaleDateString('tr-TR')}</p>
                     <div className="hidden print:flex justify-between px-8">
-                      <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">Ömer ŞAFAK<br/>Dernek Başkanı</div>
+                      <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">....<br/>Dernek Başkanı</div>
                       <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">Mali Sekreter</div>
                       <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">Denetleme Kurulu</div>
                     </div>
