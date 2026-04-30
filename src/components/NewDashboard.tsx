@@ -206,7 +206,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                   {/* Başlık ve Kesme Tarihi - Sayfa başında kalması zorunlu */}
                   <div className="hidden print:block text-center border-b-4 border-slate-900 pb-6 mb-8" style={{ pageBreakAfter: 'avoid' }}>
                     <h1 className="text-4xl font-black uppercase tracking-tighter">NİL-BEL-DER FAALİYET RAPORU</h1>
-                    <p className="text-xl font-bold text-slate-600 mt-2">Kesme Tarihi: {reportData.ceilingDate}</p>
+                    <p className="text-xl font-bold text-slate-600 mt-2">Düzenleme Tarihi: {reportData.ceilingDate}</p>
                   </div>
 
                   {/* 1. DÖNEMSEL ANALİZ - İçeriği bölme */}
@@ -273,7 +273,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                   <div className="mt-16 border-t-2 border-slate-100 pt-6">
                     <p className="text-xs italic text-slate-500 mb-10">Bu rapor portal üzerinden otomatik olarak üretilmiştir. Rapor tarihi: {new Date().toLocaleDateString('tr-TR')}</p>
                     <div className="hidden print:flex justify-between px-4">
-                      <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">Ömer ŞAFAK<br/>Dernek Başkanı</div>
+                      <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">....<br/>Dernek Başkanı</div>
                       <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">Mali Sekreter</div>
                       <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-xs uppercase">Denetleme Kurulu</div>
                     </div>
