@@ -274,7 +274,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                   </div>
 
                   <div className="hidden print:flex justify-between mt-20">
-                    <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-sm">Ömer ŞAFAK<br/>Dernek Başkanı</div>
+                    <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-sm">.....<br/>Dernek Başkanı</div>
                     <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-sm">Mali Sekreter</div>
                     <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-sm">Denetleme Kurulu</div>
                   </div>
