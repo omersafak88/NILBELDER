@@ -235,7 +235,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                 <div id="report-content" className="space-y-10">
                   <div className="text-center border-b-4 border-slate-900 pb-6 mb-8">
                     <h1 className="text-3xl font-black uppercase">NİL-BEL-DER FAALİYET RAPORU</h1>
-                    <p className="text-lg font-bold text-slate-600 mt-1">Kesme Tarihi: {reportData.ceilingDate}</p>
+                    <p className="text-lg font-bold text-slate-600 mt-1">Rapor Tarihi: {reportData.ceilingDate}</p>
                   </div>
 
                   {/* 1. DÖNEMSEL ANALİZ */}
@@ -298,7 +298,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
 
                   {/* İmza Alanı */}
                   <div className="mt-20 flex justify-between px-10 border-t-2 border-slate-100 pt-8">
-                    <div className="text-center w-48 font-bold text-xs uppercase">Ömer ŞAFAK<br/>Dernek Başkanı</div>
+                    <div className="text-center w-48 font-bold text-xs uppercase">.....<br/>Dernek Başkanı</div>
                     <div className="text-center w-48 font-bold text-xs uppercase">Mali Sekreter</div>
                     <div className="text-center w-48 font-bold text-xs uppercase">Denetleme Kurulu</div>
                   </div>
