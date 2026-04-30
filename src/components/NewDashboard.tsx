@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, FileText, Calendar, Users, ClipboardList, RefreshCw, Activity, MessageSquare, Download } from 'lucide-react';
+import { X, FileText, Calendar, Users, ClipboardList, RefreshCw, Activity, MessageSquare, Download, Table as TableIcon } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { AuthSession } from '../lib/auth';
 
@@ -75,7 +75,6 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
       const startOfYear = `${reportDate.year}-01-01`;
 
       const txSelect = 'type, amount, member_id, description, transaction_date, transaction_categories(name)';
-      // requests_activities için artık event_date sütunu kullanılıyor
       const [monthlyTx, yearlyTx, allTimeTx, monthlyReqAct, yearlyReqAct, allTimeReqAct, allMembers, newMembers] = await Promise.all([
         fetchAllData('transactions', txSelect, { column: 'transaction_date', gte: startOfMonth, lte: ceilingDate }),
         fetchAllData('transactions', txSelect, { column: 'transaction_date', gte: startOfYear, lte: ceilingDate }),
@@ -124,33 +123,27 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
     } finally { setReportLoading(false); }
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
+  const handlePrint = () => window.print();
 
   const formatCurrency = (val: number) => val.toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   return (
     <div className="space-y-8 p-4 bg-slate-50 min-h-screen print:bg-white print:p-0">
+      {/* Üst Kartlar - Yazdırmada Gizli */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 print:hidden">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-emerald-500">
-          <p className="text-slate-500 text-xs font-bold uppercase">Toplam Gelir</p>
-          <p className="text-2xl font-black text-emerald-600">{formatCurrency(stats.totalIncome)} TL</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-rose-500">
-          <p className="text-slate-500 text-xs font-bold uppercase">Toplam Gider</p>
-          <p className="text-2xl font-black text-rose-600">{formatCurrency(stats.totalExpense)} TL</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-blue-500">
-          <p className="text-slate-500 text-xs font-bold uppercase">Kasa Bakiyesi</p>
-          <p className="text-2xl font-black text-slate-800">{formatCurrency(stats.totalBalance)} TL</p>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-amber-500">
-          <p className="text-slate-500 text-xs font-bold uppercase">Aktif Üyeler</p>
-          <p className="text-2xl font-black text-slate-800">{stats.activeMembers}</p>
-        </div>
+        {[
+          { label: 'Toplam Gelir', val: `${formatCurrency(stats.totalIncome)} TL`, color: 'border-l-emerald-500', text: 'text-emerald-600' },
+          { label: 'Toplam Gider', val: `${formatCurrency(stats.totalExpense)} TL`, color: 'border-l-rose-500', text: 'text-rose-600' },
+          { label: 'Net Bakiye', val: `${formatCurrency(stats.totalBalance)} TL`, color: 'border-l-blue-500', text: 'text-slate-800' },
+          { label: 'Aktif Üyeler', val: stats.activeMembers, color: 'border-l-amber-500', text: 'text-slate-800' },
+        ].map((item, i) => (
+          <div key={i} className={`bg-white p-6 rounded-2xl shadow-sm border-l-4 ${item.color}`}>
+            <p className="text-slate-500 text-xs font-bold uppercase">{item.label}</p>
+            <p className={`text-2xl font-black ${item.text}`}>{item.val}</p>
+          </div>
+        ))}
         <div className="bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-cyan-500">
-          <p className="text-slate-500 text-xs font-bold uppercase tracking-tighter">Talepler / Faaliyetler</p>
+          <p className="text-slate-500 text-xs font-bold uppercase">Talepler / Faaliyetler</p>
           <p className="text-2xl font-black text-slate-800">{stats.totalRequests + stats.totalActivities}</p>
           <div className="flex gap-2 mt-1 text-[10px] font-bold uppercase">
              <span className="text-cyan-600 bg-cyan-50 px-1 rounded">{stats.totalRequests} TALEP</span>
@@ -159,94 +152,126 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
         </div>
       </div>
 
-      <button onClick={() => setShowReportModal(true)} className="fixed bottom-8 right-8 z-40 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-full shadow-2xl font-bold flex items-center gap-3 print:hidden">
+      <button onClick={() => setShowReportModal(true)} className="fixed bottom-8 right-8 z-40 bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-full shadow-2xl font-bold flex items-center gap-3 print:hidden transition-transform hover:scale-105">
         <FileText size={24} /> Detaylı Faaliyet Raporu
       </button>
 
       {showReportModal && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[60] flex items-center justify-center p-4 print:relative print:inset-auto print:bg-white print:p-0 print:block">
-          <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl max-h-[92vh] overflow-hidden flex flex-col print:shadow-none print:max-h-none print:w-full print:rounded-none">
+          <div className="bg-white rounded-3xl w-full max-w-5xl shadow-2xl max-h-[92vh] overflow-hidden flex flex-col print:shadow-none print:max-h-none print:rounded-none">
+            {/* Modal Header */}
             <div className="p-6 border-b flex justify-between items-center bg-white print:hidden">
-              <div className="flex items-center gap-3">
+              <h3 className="text-2xl font-black text-slate-800 uppercase tracking-tight flex items-center gap-3">
                 <div className="p-2 bg-blue-100 text-blue-600 rounded-xl"><ClipboardList /></div>
-                <h3 className="text-2xl font-black text-slate-800 uppercase">Dernek Faaliyet Analizi</h3>
-              </div>
+                Kurumsal Faaliyet Analizi
+              </h3>
               <div className="flex items-center gap-2">
                 {reportData && (
-                  <button onClick={handlePrint} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-sm font-bold transition-all">
-                    <Download size={18} /> PDF İndir
+                  <button onClick={handlePrint} className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-emerald-100 transition-all">
+                    <Download size={18} /> PDF OLARAK İNDİR
                   </button>
                 )}
-                <button onClick={() => setShowReportModal(false)} className="p-2 hover:bg-slate-100 rounded-full"><X size={28} /></button>
+                <button onClick={() => setShowReportModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors"><X size={28} /></button>
               </div>
             </div>
             
-            <div className="p-8 overflow-y-auto space-y-8 print:overflow-visible">
-              <div className="flex flex-wrap gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-200 print:hidden">
+            <div className="p-8 overflow-y-auto space-y-10 print:overflow-visible print:p-4">
+              {/* Filtreler - Yazdırmada Gizli */}
+              <div className="flex flex-wrap gap-4 bg-slate-50 p-5 rounded-2xl border border-slate-200 print:hidden">
                 <div className="flex-1 min-w-[200px]">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Dönem Seçimi</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase ml-1">Raporlama Periyodu</label>
                   <div className="flex gap-2">
-                    <select className="flex-1 p-3 bg-white border rounded-xl font-semibold" value={reportDate.month} onChange={(e) => setReportDate({...reportDate, month: parseInt(e.target.value)})}>
-                      {Array.from({length: 12}, (_, i) => <option key={i+1} value={i+1}>{i+1}. Ay</option>)}
+                    <select className="flex-1 p-3 bg-white border rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500" value={reportDate.month} onChange={(e) => setReportDate({...reportDate, month: parseInt(e.target.value)})}>
+                      {Array.from({length: 12}, (_, i) => <option key={i+1} value={i+1}>{i+1}. Ay (Ocak-Aralık)</option>)}
                     </select>
-                    <select className="flex-1 p-3 bg-white border rounded-xl font-semibold" value={reportDate.year} onChange={(e) => setReportDate({...reportDate, year: parseInt(e.target.value)})}>
+                    <select className="flex-1 p-3 bg-white border rounded-xl font-semibold outline-none focus:ring-2 focus:ring-blue-500" value={reportDate.year} onChange={(e) => setReportDate({...reportDate, year: parseInt(e.target.value)})}>
                       {[2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
                     </select>
                   </div>
                 </div>
-                <button onClick={generateReport} className="self-end px-10 py-3 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200">
-                   {reportLoading ? 'Veriler İşleniyor...' : 'Raporu Oluştur'}
+                <button onClick={generateReport} className="self-end px-12 py-3.5 bg-blue-600 text-white rounded-xl font-bold hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all active:scale-95">
+                   {reportLoading ? 'Veriler İşleniyor...' : 'RAPORU OLUŞTUR'}
                 </button>
               </div>
 
               {reportData && (
-                <div id="printable-report" className="space-y-8 pb-10 print:pb-0">
-                  <div className="hidden print:block text-center border-b-2 border-slate-900 pb-4 mb-8">
-                    <h2 className="text-3xl font-black uppercase">NİL-BEL-DER FAALİYET RAPORU</h2>
-                    <p className="text-lg font-bold text-slate-600">Rapor Tarihi: {reportData.ceilingDate}</p>
+                <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
+                  {/* Başlık (Sadece Yazdırmada) */}
+                  <div className="hidden print:block text-center border-b-4 border-slate-900 pb-6 mb-10">
+                    <h1 className="text-4xl font-black uppercase tracking-tighter">NİL-BEL-DER FAALİYET RAPORU</h1>
+                    <p className="text-xl font-bold text-slate-600 mt-2">Kümülatif Kesme Tarihi: {reportData.ceilingDate}</p>
                   </div>
 
-                  <div className="bg-blue-50/50 border border-blue-200 p-8 rounded-3xl relative">
-                    <h4 className="text-blue-900 font-black text-lg mb-4 uppercase underline decoration-2 underline-offset-8">1. Dönemsel Analiz ({reportDate.month}/{reportDate.year})</h4>
-                    <div className="space-y-4 text-slate-800 leading-relaxed italic">
-                      <p>Derneğimiz ilgili dönemde <span className="font-bold text-blue-700">{formatCurrency(reportData.monthly.fin.tGelir)} TL</span> toplam gelir elde etmiştir. Bu tutarın {formatCurrency(reportData.monthly.fin.aidat)} TL'si aidat, {formatCurrency(reportData.monthly.fin.bagis)} TL'si bağış ve {formatCurrency(reportData.monthly.fin.digerGelir)} TL'si diğer kalemlerden oluşmaktadır.</p>
-                      <p>Aynı dönemde <strong>{reportData.monthly.fin.kSet.size}</strong> ihtiyaç sahibine toplam <strong>{formatCurrency(reportData.monthly.fin.tGider)} TL</strong> tutarında sosyal ve eğitim yardımı ulaştırılmıştır.</p>
-                      <p className="not-italic font-bold bg-blue-100/50 p-4 rounded-xl border border-blue-200 text-blue-800">
-                        Saha Faaliyetleri: Dönem içerisinde {reportData.monthly.req.tReq} yardım talebi alınmış, {reportData.monthly.req.pReq} onaylı talep üzerinden {reportData.monthly.req.tAct} adet operasyonel faaliyet başarıyla tamamlanmıştır.
+                  {/* 1. DÖNEMSEL ANALİZ */}
+                  <div className="bg-blue-50/40 border-2 border-blue-100 p-8 rounded-3xl relative">
+                    <h4 className="text-blue-900 font-black text-lg mb-4 uppercase underline decoration-2 underline-offset-8">1. Dönemsel Faaliyet Özeti ({reportDate.month}/{reportDate.year})</h4>
+                    <div className="space-y-4 text-slate-800 leading-relaxed italic text-base">
+                      <p>Derneğimiz, <span className="font-bold">{reportDate.month}/{reportDate.year}</span> döneminde <span className="font-bold text-blue-700">{formatCurrency(reportData.monthly.fin.tGelir)} TL</span> toplam gelir elde etmiştir. Bu gelirin detayı; {formatCurrency(reportData.monthly.fin.aidat)} TL aidat, {formatCurrency(reportData.monthly.fin.bagis)} TL bağış ve {formatCurrency(reportData.monthly.fin.digerGelir)} TL diğer gelirler şeklindedir.</p>
+                      <p>Aynı dönemde <strong>{reportData.monthly.fin.kSet.size}</strong> kişiye toplam <strong>{formatCurrency(reportData.monthly.fin.tGider)} TL</strong> yardım ulaştırılmıştır. (Sosyal: {formatCurrency(reportData.monthly.fin.sosyal)} TL, Eğitim: {formatCurrency(reportData.monthly.fin.egitim)} TL)</p>
+                      <p className="not-italic font-bold bg-white/80 p-4 rounded-xl border border-blue-200 text-blue-800 shadow-sm">
+                        <MessageSquare size={18} className="inline mr-2 mb-1" /> Saha Operasyonu: Bu ay {reportData.monthly.req.tReq} yardım talebi alınmış, {reportData.monthly.req.pReq} adedi olumlu sonuçlanarak {reportData.monthly.req.tAct} faaliyet icra edilmiştir.
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-emerald-50/50 border border-emerald-200 p-8 rounded-3xl">
-                    <h4 className="text-emerald-900 font-black text-lg mb-4 uppercase underline decoration-2 underline-offset-8">2. Yıllık Kümülatif Durum (01.01.{reportDate.year} - {reportData.ceilingDate})</h4>
-                    <div className="space-y-4 text-slate-800 leading-relaxed italic">
-                      <p>Yıl başından rapor tarihine kadar dernek kasasına giren toplam nakit hacmi <strong>{formatCurrency(reportData.yearly.fin.tGelir)} TL</strong> olarak gerçekleşmiştir. Harcama kalemlerinde ise toplam <strong>{formatCurrency(reportData.yearly.fin.tGider)} TL</strong> destek ödemesi yapılmıştır.</p>
-                      <p className="not-italic font-bold bg-emerald-100/50 p-4 rounded-xl border border-emerald-200 text-emerald-800">
-                        Yıllık Operasyon: Belirtilen tarih aralığında {reportData.yearly.req.tReq} talep dosyası oluşturulmuş, {reportData.yearly.req.tAct} adet sosyal sorumluluk faaliyeti icra edilmiştir.
+                  {/* 2. YILLIK ANALİZ */}
+                  <div className="bg-emerald-50/40 border-2 border-emerald-100 p-8 rounded-3xl">
+                    <h4 className="text-emerald-900 font-black text-lg mb-4 uppercase underline decoration-2 underline-offset-8">2. Yıllık Kümülatif Analiz (01.01.{reportDate.year} - {reportData.ceilingDate})</h4>
+                    <div className="space-y-4 text-slate-800 leading-relaxed italic text-base">
+                      <p>Yıl başından kümülatif rapor tarihine kadar toplam <strong>{formatCurrency(reportData.yearly.fin.tGelir)} TL</strong> gelir konsolide edilmiş; buna karşılık toplam <strong>{formatCurrency(reportData.yearly.fin.tGider)} TL</strong> harcama yapılmıştır.</p>
+                      <p>Bu süreçte toplam <strong>{reportData.yearly.fin.kSet.size} benzersiz kişiye</strong> el uzatılmış, sosyal dayanışma faaliyetleri kapsamında {formatCurrency(reportData.yearly.fin.sosyal)} TL kaynak aktarılmıştır.</p>
+                      <p className="not-italic font-bold bg-white/80 p-4 rounded-xl border border-emerald-200 text-emerald-800 shadow-sm">
+                        <Activity size={18} className="inline mr-2 mb-1" /> Yıllık Performans: {reportData.ceilingDate} tarihine kadar toplam {reportData.yearly.req.tReq} talep dosyalanmış, bunlardan {reportData.yearly.req.tAct} adedi saha faaliyetiyle sonuçlanmıştır.
                       </p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-900 p-8 rounded-3xl shadow-xl text-white">
-                    <h4 className="text-blue-400 font-black text-lg mb-4 uppercase tracking-widest border-b border-slate-700 pb-2">3. Kuruluştan Bugüne Genel Toplam ({reportData.ceilingDate})</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                      <div className="italic opacity-90 space-y-4">
-                        <p>Derneğimizin kurulduğu günden itibaren yönetilen toplam bütçe <span className="text-emerald-400 font-bold text-xl">{formatCurrency(reportData.allTime.fin.tGelir)} TL</span> seviyesine ulaşmıştır.</p>
-                        <p>Toplamda <strong>{reportData.allTime.fin.kSet.size} farklı bireye</strong> dokunulmuş ve {formatCurrency(reportData.allTime.fin.tGider)} TL değerinde kaynak sosyal adaleti sağlamak adına seferber edilmiştir.</p>
-                      </div>
-                      <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
-                        <p className="font-bold text-blue-300 mb-3 uppercase text-xs tracking-tighter">Kurumsal Performans Göstergeleri:</p>
-                        <div className="space-y-3 text-sm">
-                          <div className="flex justify-between border-b border-slate-700 pb-2"><span>Onay Oranı:</span> <span className="text-emerald-400 font-bold">%{reportData.allTime.req.tReq > 0 ? Math.round((reportData.allTime.req.pReq / reportData.allTime.req.tReq) * 100) : 0}</span></div>
-                          <div className="flex justify-between border-b border-slate-700 pb-2"><span>Toplam Talep:</span> <span>{reportData.allTime.req.tReq} Adet</span></div>
-                          <div className="flex justify-between"><span>Tamamlanan Faaliyet:</span> <span className="text-blue-400 font-bold">{reportData.allTime.req.tAct} Adet</span></div>
-                        </div>
-                      </div>
+                  {/* 3. VERİ KARŞILAŞTIRMA TABLOSU (YENİ) */}
+                  <div className="space-y-4">
+                    <h4 className="text-slate-800 font-black text-lg uppercase flex items-center gap-2">
+                      <TableIcon className="text-blue-600" /> 3. Detaylı Veri Karşılaştırma Tablosu
+                    </h4>
+                    <div className="overflow-hidden border-2 border-slate-200 rounded-2xl shadow-sm">
+                      <table className="w-full text-left border-collapse bg-white">
+                        <thead>
+                          <tr className="bg-slate-900 text-white text-[11px] uppercase tracking-widest">
+                            <th className="p-4 border-r border-slate-700">AÇIKLAMA / KALEM</th>
+                            <th className="p-4 border-r border-slate-700 text-center">AYLIK ({reportDate.month})</th>
+                            <th className="p-4 border-r border-slate-700 text-center">YILLIK ({reportDate.year})</th>
+                            <th className="p-4 text-center">GENEL TOPLAM</th>
+                          </tr>
+                        </thead>
+                        <tbody className="text-sm text-slate-700 font-medium">
+                          <tr className="border-b bg-slate-50/50"><td className="p-3 font-bold text-slate-900" colSpan={4}>GELİR KALEMLERİ</td></tr>
+                          <tr className="border-b"><td className="p-3 pl-6">Üye Aidatları</td><td className="p-3 text-center">{formatCurrency(reportData.monthly.fin.aidat)}</td><td className="p-3 text-center">{formatCurrency(reportData.yearly.fin.aidat)}</td><td className="p-3 text-center">{formatCurrency(reportData.allTime.fin.aidat)}</td></tr>
+                          <tr className="border-b"><td className="p-3 pl-6">Bağış Gelirleri</td><td className="p-3 text-center">{formatCurrency(reportData.monthly.fin.bagis)}</td><td className="p-3 text-center">{formatCurrency(reportData.yearly.fin.bagis)}</td><td className="p-3 text-center">{formatCurrency(reportData.allTime.fin.bagis)}</td></tr>
+                          <tr className="border-b"><td className="p-3 pl-6">Diğer Gelirler</td><td className="p-3 text-center">{formatCurrency(reportData.monthly.fin.digerGelir)}</td><td className="p-3 text-center">{formatCurrency(reportData.yearly.fin.digerGelir)}</td><td className="p-3 text-center">{formatCurrency(reportData.allTime.fin.digerGelir)}</td></tr>
+                          <tr className="bg-emerald-50 font-black text-emerald-900 border-b"><td className="p-3 pl-6">TOPLAM GELİR</td><td className="p-3 text-center">{formatCurrency(reportData.monthly.fin.tGelir)}</td><td className="p-3 text-center">{formatCurrency(reportData.yearly.fin.tGelir)}</td><td className="p-3 text-center">{formatCurrency(reportData.allTime.fin.tGelir)}</td></tr>
+                          
+                          <tr className="border-b bg-slate-50/50"><td className="p-3 font-bold text-slate-900" colSpan={4}>GİDER VE YARDIM KALEMLERİ</td></tr>
+                          <tr className="border-b"><td className="p-3 pl-6">Sosyal Yardımlar</td><td className="p-3 text-center">{formatCurrency(reportData.monthly.fin.sosyal)}</td><td className="p-3 text-center">{formatCurrency(reportData.yearly.fin.sosyal)}</td><td className="p-3 text-center">{formatCurrency(reportData.allTime.fin.sosyal)}</td></tr>
+                          <tr className="border-b"><td className="p-3 pl-6">Eğitim Yardımları</td><td className="p-3 text-center">{formatCurrency(reportData.monthly.fin.egitim)}</td><td className="p-3 text-center">{formatCurrency(reportData.yearly.fin.egitim)}</td><td className="p-3 text-center">{formatCurrency(reportData.allTime.fin.egitim)}</td></tr>
+                          <tr className="border-b"><td className="p-3 pl-6">Operasyonel Giderler</td><td className="p-3 text-center">{formatCurrency(reportData.monthly.fin.digerGider)}</td><td className="p-3 text-center">{formatCurrency(reportData.yearly.fin.digerGider)}</td><td className="p-3 text-center">{formatCurrency(reportData.allTime.fin.digerGider)}</td></tr>
+                          <tr className="bg-rose-50 font-black text-rose-900 border-b"><td className="p-3 pl-6">TOPLAM GİDER</td><td className="p-3 text-center">{formatCurrency(reportData.monthly.fin.tGider)}</td><td className="p-3 text-center">{formatCurrency(reportData.yearly.fin.tGider)}</td><td className="p-3 text-center">{formatCurrency(reportData.allTime.fin.tGider)}</td></tr>
+                          
+                          <tr className="border-b bg-slate-50/50"><td className="p-3 font-bold text-slate-900" colSpan={4}>OPERASYONEL GÖSTERGELER</td></tr>
+                          <tr className="border-b"><td className="p-3 pl-6">Yardım Yapılan Kişi Sayısı</td><td className="p-3 text-center font-bold">{reportData.monthly.fin.kSet.size}</td><td className="p-3 text-center font-bold text-emerald-700">{reportData.yearly.fin.kSet.size}</td><td className="p-3 text-center font-bold text-blue-700">{reportData.allTime.fin.kSet.size}</td></tr>
+                          <tr className="border-b"><td className="p-3 pl-6">Gelen Talep Sayısı</td><td className="p-3 text-center">{reportData.monthly.req.tReq}</td><td className="p-3 text-center">{reportData.yearly.req.tReq}</td><td className="p-3 text-center">{reportData.allTime.req.tReq}</td></tr>
+                          <tr><td className="p-3 pl-6">Tamamlanan Faaliyetler</td><td className="p-3 text-center">{reportData.monthly.req.tAct}</td><td className="p-3 text-center">{reportData.yearly.req.tAct}</td><td className="p-3 text-center">{reportData.allTime.req.tAct}</td></tr>
+                        </tbody>
+                      </table>
                     </div>
                   </div>
 
-                  <div className="bg-amber-50 border border-amber-200 p-6 rounded-2xl italic text-slate-800 print:border-none">
-                    <p>Rapor Tarihi itibarıyla derneğimizin toplam aktif üye sayısı <span className="font-bold">{stats.activeMembers}</span> kişidir. Bu ay aramıza katılan {reportData.newMembers.length > 0 ? reportData.newMembers.join(', ') : 'yeni üye bulunmamaktadır'}.</p>
+                  {/* Üyelik Bilgileri */}
+                  <div className="bg-amber-50 border-2 border-amber-100 p-6 rounded-2xl italic text-slate-800 text-sm print:shadow-none">
+                    <p><strong>Üyelik Notu:</strong> Rapor tavan tarihi itibarıyla derneğimizin toplam aktif üye sayısı <span className="font-bold">{stats.activeMembers}</span> kişidir. İlgili ay içerisinde aramıza katılan yeni üyeler: <span className="not-italic font-bold text-amber-900">{reportData.newMembers.length > 0 ? reportData.newMembers.join(', ') : 'Bulunmamaktadır'}</span>.</p>
+                  </div>
+
+                  <div className="hidden print:flex justify-between mt-20">
+                    <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-sm">Dernek Başkanı<br/>Ömer ŞAFAK</div>
+                    <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-sm">Mali Sekreter</div>
+                    <div className="text-center w-48 border-t border-slate-900 pt-2 font-bold text-sm">Denetleme Kurulu</div>
                   </div>
                 </div>
               )}
