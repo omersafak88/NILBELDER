@@ -87,14 +87,18 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
       const endOfMonth = new Date(reportDate.year, reportDate.month, 0).toISOString().split('T')[0];
       const startOfYear = `${reportDate.year}-01-01`;
 
-      const txSelect = 'type, amount, category_id, member_id, description, transaction_categories(name), members(full_name)';
-      const [monthlyTransactions, yearlyTransactions, allTransactions, newMembers, allRequestsActivities] = await Promise.all([
+      const txSelect = 'type, amount, category_id, member_id, description, transaction_categories(name)';
+      const [monthlyTransactions, yearlyTransactions, allTransactions, allMembers, newMembers, allRequestsActivities] = await Promise.all([
         fetchAllData('transactions', txSelect, { column: 'transaction_date', gte: startOfMonth, lte: endOfMonth }),
         fetchAllData('transactions', txSelect, { column: 'transaction_date', gte: startOfYear, lte: endOfMonth }),
         fetchAllData('transactions', txSelect, { column: 'transaction_date', lte: endOfMonth }),
+        fetchAllData('members', 'id, full_name', {}),
         fetchAllData('members', 'full_name', { column: 'registration_date', gte: startOfMonth, lte: endOfMonth }),
         fetchAllData('requests_activities', 'type, result_status', {})
       ]);
+
+      const memberMap = new Map<string, string>();
+      allMembers.forEach((m: any) => { if (m.id && m.full_name) memberMap.set(m.id, m.full_name); });
 
       const processData = (data: any[]) => {
         const res = { aidat: 0, bagis: 0, digerGelir: 0, sosyalYardim: 0, egitimYardim: 0, digerYardim: 0, sosyalKisiler: new Set<string>(), egitimKisiler: new Set<string>() };
@@ -102,13 +106,12 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
           const catName = (item.transaction_categories?.name || '').toLocaleLowerCase('tr-TR');
           const amt = Number(item.amount);
 
-          let personRaw = '';
-          if (item.member_id && item.members?.full_name) {
-            personRaw = item.members.full_name;
+          let person = '';
+          if (item.member_id && memberMap.has(item.member_id)) {
+            person = memberMap.get(item.member_id)!.toLocaleUpperCase('tr-TR');
           } else if (item.description && item.description.trim()) {
-            personRaw = item.description.trim();
+            person = item.description.trim().toLocaleUpperCase('tr-TR');
           }
-          const person = personRaw.toLocaleUpperCase('tr-TR');
 
           if (item.type === 'income') {
             if (catName.includes('aidat')) res.aidat += amt;
