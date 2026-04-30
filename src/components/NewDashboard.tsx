@@ -200,7 +200,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                 <div className="space-y-10 animate-in slide-in-from-bottom-4 duration-500">
                   <div className="hidden print:block text-center border-b-4 border-slate-900 pb-6 mb-10">
                     <h1 className="text-4xl font-black uppercase tracking-tighter">NİL-BEL-DER FAALİYET RAPORU</h1>
-                    <p className="text-xl font-bold text-slate-600 mt-2">Kümülatif Kesme Tarihi: {reportData.ceilingDate}</p>
+                    <p className="text-xl font-bold text-slate-600 mt-2">Rapor Tarhi: {reportData.ceilingDate}</p>
                   </div>
 
                   {/* 1. DÖNEMSEL ANALİZ */}
