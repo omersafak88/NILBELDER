@@ -241,6 +241,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                   {/* 3. VERİ KARŞILAŞTIRMA TABLOSU */}
                   <div className="space-y-4">
                     <h4 className="text-slate-800 font-black text-lg uppercase flex items-center gap-2 text-base">
+                      <br/>
                       <TableIcon className="text-blue-600" /> 3. Detaylı Veri Karşılaştırma Tablosu
                     </h4>
                     <div className="overflow-hidden border-2 border-slate-200 rounded-2xl shadow-sm">
