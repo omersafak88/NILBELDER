@@ -87,10 +87,11 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
       const endOfMonth = new Date(reportDate.year, reportDate.month, 0).toISOString().split('T')[0];
       const startOfYear = `${reportDate.year}-01-01`;
 
+      const txSelect = 'type, amount, category_id, member_id, description, transaction_categories(name), members(full_name)';
       const [monthlyTransactions, yearlyTransactions, allTransactions, newMembers, allRequestsActivities] = await Promise.all([
-        fetchAllData('transactions', 'type, amount, category_id, member_id, description, transaction_categories(name)', { column: 'transaction_date', gte: startOfMonth, lte: endOfMonth }),
-        fetchAllData('transactions', 'type, amount, category_id, member_id, description, transaction_categories(name)', { column: 'transaction_date', gte: startOfYear, lte: endOfMonth }),
-        fetchAllData('transactions', 'type, amount, category_id, member_id, description, transaction_categories(name)', { column: 'transaction_date', lte: endOfMonth }),
+        fetchAllData('transactions', txSelect, { column: 'transaction_date', gte: startOfMonth, lte: endOfMonth }),
+        fetchAllData('transactions', txSelect, { column: 'transaction_date', gte: startOfYear, lte: endOfMonth }),
+        fetchAllData('transactions', txSelect, { column: 'transaction_date', lte: endOfMonth }),
         fetchAllData('members', 'full_name', { column: 'registration_date', gte: startOfMonth, lte: endOfMonth }),
         fetchAllData('requests_activities', 'type, result_status', {})
       ]);
@@ -100,7 +101,13 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
         data.forEach(item => {
           const catName = (item.transaction_categories?.name || '').toLocaleLowerCase('tr-TR');
           const amt = Number(item.amount);
-          const personRaw = (item.description || item.member_id || 'Bilinmeyen').toString().trim();
+
+          let personRaw = '';
+          if (item.member_id && item.members?.full_name) {
+            personRaw = item.members.full_name;
+          } else if (item.description && item.description.trim()) {
+            personRaw = item.description.trim();
+          }
           const person = personRaw.toLocaleUpperCase('tr-TR');
 
           if (item.type === 'income') {
@@ -108,8 +115,8 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
             else if (catName.includes('bağış') || catName.includes('bagis')) res.bagis += amt;
             else res.digerGelir += amt;
           } else {
-            if (catName.includes('sosyal')) { res.sosyalYardim += amt; res.sosyalKisiler.add(person); }
-            else if (catName.includes('eğitim') || catName.includes('egitim')) { res.egitimYardim += amt; res.egitimKisiler.add(person); }
+            if (catName.includes('sosyal')) { res.sosyalYardim += amt; if (person) res.sosyalKisiler.add(person); }
+            else if (catName.includes('eğitim') || catName.includes('egitim')) { res.egitimYardim += amt; if (person) res.egitimKisiler.add(person); }
             else res.digerYardim += amt;
           }
         });
