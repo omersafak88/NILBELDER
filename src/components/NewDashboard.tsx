@@ -235,7 +235,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                         Yıllık Dağılım: {reportData.yearly.fin.sKSet.size} kişi sosyal, {reportData.yearly.fin.eKSet.size} kişi eğitim yardımı almıştır.
                       </p>
                     </div>
-                    </br>
+                    <br>
                   </div>
 
                   {/* 3. VERİ KARŞILAŞTIRMA TABLOSU */}
