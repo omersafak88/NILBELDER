@@ -96,19 +96,20 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
       ]);
 
       const processData = (data: any[]) => {
-        const res = { aidat: 0, bagis: 0, digerGelir: 0, sosyalYardim: 0, egitimYardim: 0, digerYardim: 0, sosyalKisiler: new Set(), egitimKisiler: new Set() };
+        const res = { aidat: 0, bagis: 0, digerGelir: 0, sosyalYardim: 0, egitimYardim: 0, digerYardim: 0, sosyalKisiler: new Set<string>(), egitimKisiler: new Set<string>() };
         data.forEach(item => {
           const catName = (item.transaction_categories?.name || '').toLocaleLowerCase('tr-TR');
           const amt = Number(item.amount);
-          const person = item.member_id || item.description || "Bilinmeyen";
+          const personRaw = (item.description || item.member_id || 'Bilinmeyen').toString().trim();
+          const person = personRaw.toLocaleUpperCase('tr-TR');
 
           if (item.type === 'income') {
             if (catName.includes('aidat')) res.aidat += amt;
-            else if (catName.includes('bağış')) res.bagis += amt;
+            else if (catName.includes('bağış') || catName.includes('bagis')) res.bagis += amt;
             else res.digerGelir += amt;
           } else {
             if (catName.includes('sosyal')) { res.sosyalYardim += amt; res.sosyalKisiler.add(person); }
-            else if (catName.includes('eğitim')) { res.egitimYardim += amt; res.egitimKisiler.add(person); }
+            else if (catName.includes('eğitim') || catName.includes('egitim')) { res.egitimYardim += amt; res.egitimKisiler.add(person); }
             else res.digerYardim += amt;
           }
         });
