@@ -229,7 +229,7 @@ export default function NewDashboard({ session, onLogout }: DashboardProps) {
                 <div className="space-y-10 print:space-y-8">
                   <div className="hidden print:block text-center border-b-4 border-slate-900 pb-6 mb-8" style={{ pageBreakAfter: 'avoid' }}>
                     <h1 className="text-3xl font-black uppercase">NİL-BEL-DER FAALİYET RAPORU</h1>
-                    <p className="text-lg font-bold text-slate-600 mt-2">Rapor Kesme Tarihi: {reportData.ceilingDate}</p>
+                    <p className="text-lg font-bold text-slate-600 mt-2">Rapor Oluşturma Tarihi: {reportData.ceilingDate}</p>
                   </div>
 
                   {/* 1. DÖNEMSEL ANALİZ */}
