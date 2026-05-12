@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import {
   Plus, X, FileText, ClipboardList, CheckCircle2, XCircle,
-  Pencil, Trash2, ChevronDown, Calendar, Filter, Search
+  Pencil, Trash2, ChevronDown, Calendar, Filter, Search, Download
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -158,6 +158,115 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
   const formatDate = (d: string) =>
     new Date(d).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
 
+  const exportAsHtml = () => {
+    const requests = records.filter(r => r.type === 'request');
+    const activities = records.filter(r => r.type === 'activity');
+    const positiveCount = requests.filter(r => r.result_status === 'positive').length;
+    const negativeCount = requests.filter(r => r.result_status === 'negative').length;
+    const pendingCount = requests.filter(r => !r.result_status).length;
+
+    const fmtDate = (d: string) =>
+      new Date(d).toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
+
+    const html = `<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Talepler ve Faaliyetler Raporu</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f8fafc; color: #1e293b; line-height: 1.6; padding: 40px 24px; }
+  .container { max-width: 900px; margin: 0 auto; }
+  .header { text-align: center; margin-bottom: 48px; padding-bottom: 32px; border-bottom: 2px solid #e2e8f0; }
+  .header h1 { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }
+  .header p { font-size: 14px; color: #64748b; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 48px; }
+  .stat-card { background: white; border-radius: 12px; padding: 20px; text-align: center; border: 1px solid #e2e8f0; }
+  .stat-card .number { font-size: 32px; font-weight: 800; }
+  .stat-card .label { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-top: 4px; }
+  .stat-card.total .number { color: #0f172a; }
+  .stat-card.positive .number { color: #059669; }
+  .stat-card.negative .number { color: #dc2626; }
+  .stat-card.pending .number { color: #d97706; }
+  .stat-card.activity .number { color: #0891b2; }
+  .section { margin-bottom: 48px; }
+  .section-title { font-size: 20px; font-weight: 700; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
+  .section-title .icon { width: 32px; height: 32px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .section-title .icon.request { background: #fef3c7; }
+  .section-title .icon.activity { background: #ccfbf1; }
+  .record { background: white; border-radius: 12px; padding: 20px; margin-bottom: 12px; border: 1px solid #e2e8f0; page-break-inside: avoid; }
+  .record-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  .badge { display: inline-flex; align-items: center; padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge.positive { background: #d1fae5; color: #065f46; }
+  .badge.negative { background: #fee2e2; color: #991b1b; }
+  .badge.pending { background: #fef3c7; color: #92400e; }
+  .date { font-size: 12px; color: #94a3b8; }
+  .record-body { font-size: 14px; color: #334155; white-space: pre-wrap; }
+  .result-box { margin-top: 12px; padding: 12px 16px; background: #f8fafc; border-radius: 8px; border-left: 3px solid #cbd5e1; }
+  .result-box .result-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #64748b; margin-bottom: 4px; }
+  .result-box p { font-size: 13px; color: #475569; }
+  .footer { text-align: center; padding-top: 32px; border-top: 1px solid #e2e8f0; margin-top: 48px; }
+  .footer p { font-size: 12px; color: #94a3b8; }
+  @media print { body { padding: 20px; background: white; } .stat-card, .record { box-shadow: none; border: 1px solid #e2e8f0; } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <h1>Talepler ve Faaliyetler Raporu</h1>
+    <p>Rapor Tarihi: ${fmtDate(new Date().toISOString())}</p>
+  </div>
+
+  <div class="stats">
+    <div class="stat-card total"><div class="number">${records.length}</div><div class="label">Toplam Kayit</div></div>
+    <div class="stat-card activity"><div class="number">${activities.length}</div><div class="label">Faaliyet</div></div>
+    <div class="stat-card total"><div class="number">${requests.length}</div><div class="label">Talep</div></div>
+    <div class="stat-card positive"><div class="number">${positiveCount}</div><div class="label">Olumlu</div></div>
+    <div class="stat-card negative"><div class="number">${negativeCount}</div><div class="label">Olumsuz</div></div>
+    <div class="stat-card pending"><div class="number">${pendingCount}</div><div class="label">Beklemede</div></div>
+  </div>
+
+  ${requests.length > 0 ? `<div class="section">
+    <div class="section-title"><span class="icon request">&#128203;</span> Talepler (${requests.length})</div>
+    ${requests.map(r => `<div class="record">
+      <div class="record-header">
+        <span class="badge ${r.result_status === 'positive' ? 'positive' : r.result_status === 'negative' ? 'negative' : 'pending'}">${r.result_status === 'positive' ? 'Olumlu' : r.result_status === 'negative' ? 'Olumsuz' : 'Beklemede'}</span>
+        <span class="date">${r.event_date ? fmtDate(r.event_date) : fmtDate(r.created_at)}</span>
+      </div>
+      <div class="record-body">${r.description.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+      ${r.result_description ? `<div class="result-box"><div class="result-label">Sonuc Aciklamasi</div><p>${r.result_description.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p></div>` : ''}
+    </div>`).join('\n')}
+  </div>` : ''}
+
+  ${activities.length > 0 ? `<div class="section">
+    <div class="section-title"><span class="icon activity">&#128221;</span> Faaliyetler (${activities.length})</div>
+    ${activities.map(r => `<div class="record">
+      <div class="record-header">
+        <span class="date">${r.event_date ? fmtDate(r.event_date) : fmtDate(r.created_at)}</span>
+      </div>
+      <div class="record-body">${r.description.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+    </div>`).join('\n')}
+  </div>` : ''}
+
+  <div class="footer">
+    <p>Bu rapor otomatik olarak olusturulmustur.</p>
+  </div>
+</div>
+</body>
+</html>`;
+
+    const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `talepler-faaliyetler-${new Date().toISOString().split('T')[0]}.html`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -175,13 +284,23 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
           <h2 className="text-2xl font-black text-slate-800 tracking-tight">Talepler / Faaliyetler</h2>
           <p className="text-sm text-slate-500 mt-1">Dernek talep ve faaliyetlerini buradan yonetebilirsiniz.</p>
         </div>
-        <button
-          onClick={openNew}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all"
-        >
-          <Plus size={18} />
-          Yeni Kayıt
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={exportAsHtml}
+            disabled={records.length === 0}
+            className="flex items-center gap-2 bg-slate-700 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+          >
+            <Download size={18} />
+            HTML Olarak Indir
+          </button>
+          <button
+            onClick={openNew}
+            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-semibold text-sm shadow-md hover:shadow-lg transition-all"
+          >
+            <Plus size={18} />
+            Yeni Kayıt
+          </button>
+        </div>
       </div>
 
       {/* Filter & Search */}
