@@ -92,6 +92,11 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
       .map(([tag, count]) => ({ tag, count }));
   }, [records]);
 
+  const untaggedCount = useMemo(
+    () => records.filter(r => !(r.tags || []).some(t => t.trim())).length,
+    [records]
+  );
+
   const tagSuggestions = useMemo(() => {
     if (!tagInput.trim()) return allTags.map(t => t.tag);
     const term = tagInput.trim().toLocaleLowerCase('tr-TR');
@@ -204,8 +209,12 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
     return records.filter(r => {
       if (filterType !== 'all' && r.type !== filterType) return false;
       if (selectedTag) {
-        const hasTag = (r.tags || []).some(t => t.toLocaleLowerCase('tr-TR') === selectedTag);
-        if (!hasTag) return false;
+        if (selectedTag === '__untagged__') {
+          if ((r.tags || []).some(t => t.trim())) return false;
+        } else {
+          const hasTag = (r.tags || []).some(t => t.toLocaleLowerCase('tr-TR') === selectedTag);
+          if (!hasTag) return false;
+        }
       }
       if (!searchTerm.trim()) return true;
       const term = searchTerm.toLocaleLowerCase('tr-TR');
@@ -461,6 +470,19 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
                     }`}>{count}</span>
                   </button>
                 ))}
+                {untaggedCount > 0 && (
+                  <button
+                    onClick={() => setSelectedTag(selectedTag === '__untagged__' ? null : '__untagged__')}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors mt-1 border-t border-slate-100 pt-3 ${
+                      selectedTag === '__untagged__' ? 'bg-blue-50 text-blue-700 font-semibold' : 'text-slate-500 hover:bg-slate-50'
+                    }`}
+                  >
+                    <span className="italic">Etiketsiz</span>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                      selectedTag === '__untagged__' ? 'bg-blue-100 text-blue-700' : 'bg-slate-100 text-slate-500'
+                    }`}>{untaggedCount}</span>
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -490,6 +512,16 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
                   {tag} ({count})
                 </button>
               ))}
+              {untaggedCount > 0 && (
+                <button
+                  onClick={() => setSelectedTag(selectedTag === '__untagged__' ? null : '__untagged__')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold italic transition-colors ${
+                    selectedTag === '__untagged__' ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  Etiketsiz ({untaggedCount})
+                </button>
+              )}
             </div>
           )}
 
