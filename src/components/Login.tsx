@@ -1,10 +1,15 @@
-import React, { useState } from 'react';
-import { Users, Lock, Phone, ArrowRight, ShieldCheck, Mail, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Users, Lock, Phone, ArrowRight, ShieldCheck, Mail, X, ShieldQuestion } from 'lucide-react';
 import { signIn, activateAccount, resetPassword } from '../lib/auth';
+import Captcha from './Captcha';
 
 interface LoginProps {
   onLogin: (user: any) => void;
 }
+
+const CAPTCHA_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const generateCaptchaCode = () =>
+  Array.from({ length: 5 }, () => CAPTCHA_CHARS[Math.floor(Math.random() * CAPTCHA_CHARS.length)]).join('');
 
 export default function Login({ onLogin }: LoginProps) {
   const [isActivating, setIsActivating] = useState(false);
@@ -19,16 +24,40 @@ export default function Login({ onLogin }: LoginProps) {
   const [tcId, setTcId] = useState('');
   const [resetEmail, setResetEmail] = useState(''); // Şifre sıfırlama için e-posta state'i
 
+  // Güvenlik kodu (CAPTCHA) state'leri
+  const [captchaCode, setCaptchaCode] = useState(generateCaptchaCode());
+  const [captchaInput, setCaptchaInput] = useState('');
+
+  const refreshCaptcha = () => {
+    setCaptchaCode(generateCaptchaCode());
+    setCaptchaInput('');
+  };
+
+  // Sekme değişiminde kodu yenile
+  useEffect(() => {
+    refreshCaptcha();
+  }, [isActivating]);
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError(null);
     setMessage(null);
-    
+
+    if (captchaInput.trim().toUpperCase() !== captchaCode) {
+      setError('Güvenlik kodu hatalı. Lütfen tekrar deneyin.');
+      refreshCaptcha();
+      return;
+    }
+
+    setLoading(true);
     const { user, error: loginError } = await signIn(phone, password);
-    if (loginError) setError(loginError);
-    else if (user) onLogin(user);
-    
+    if (loginError) {
+      setError(loginError);
+      refreshCaptcha();
+    } else if (user) {
+      onLogin(user);
+    }
+
     setLoading(false);
   };
 
@@ -155,13 +184,34 @@ export default function Login({ onLogin }: LoginProps) {
 
               {!isActivating && (
                 <div className="flex justify-end">
-                  <button 
+                  <button
                     type="button"
                     onClick={() => { setIsResetting(true); setError(null); setMessage(null); }}
                     className="text-sm font-medium text-blue-600 hover:text-blue-700 transition-colors"
                   >
                     Şifremi Unuttum
                   </button>
+                </div>
+              )}
+
+              {!isActivating && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">Güvenlik Doğrulaması</label>
+                  <Captcha code={captchaCode} onRefresh={refreshCaptcha} />
+                  <div className="relative mt-3">
+                    <ShieldQuestion className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <input
+                      type="text"
+                      required
+                      value={captchaInput}
+                      onChange={(e) => setCaptchaInput(e.target.value)}
+                      autoComplete="off"
+                      autoCapitalize="characters"
+                      maxLength={5}
+                      className="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none tracking-[0.3em] uppercase font-semibold"
+                      placeholder="Yukarıdaki kodu girin"
+                    />
+                  </div>
                 </div>
               )}
 
