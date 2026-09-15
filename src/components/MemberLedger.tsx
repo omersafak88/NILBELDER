@@ -88,12 +88,10 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
     const receivedCountMap = new Map<string, number>();
 
     contribData.forEach(c => {
-      if (c.contributor_member_id) {
-        providedCountMap.set(c.contributor_member_id, (providedCountMap.get(c.contributor_member_id) || 0) + 1);
-      }
-      if (c.beneficiary_member_id) {
-        receivedCountMap.set(c.beneficiary_member_id, (receivedCountMap.get(c.beneficiary_member_id) || 0) + 1);
-      }
+      const contributorIds = new Set<string>((c.contributors || []).map((p: any) => p.member_id).filter(Boolean));
+      const beneficiaryIds = new Set<string>((c.beneficiaries || []).map((p: any) => p.member_id).filter(Boolean));
+      contributorIds.forEach(id => providedCountMap.set(id, (providedCountMap.get(id) || 0) + 1));
+      beneficiaryIds.forEach(id => receivedCountMap.set(id, (receivedCountMap.get(id) || 0) + 1));
     });
 
     duesData.forEach(d => {
@@ -160,12 +158,12 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
 
   const providedList = selectedMember
     ? allContributions
-        .filter(c => c.contributor_member_id === selectedMember.id)
+        .filter(c => (c.contributors || []).some((p: any) => p.member_id === selectedMember.id))
         .sort((a, b) => new Date(b.event_date || b.created_at).getTime() - new Date(a.event_date || a.created_at).getTime())
     : [];
   const receivedContribList = selectedMember
     ? allContributions
-        .filter(c => c.beneficiary_member_id === selectedMember.id)
+        .filter(c => (c.beneficiaries || []).some((p: any) => p.member_id === selectedMember.id))
         .sort((a, b) => new Date(b.event_date || b.created_at).getTime() - new Date(a.event_date || a.created_at).getTime())
     : [];
 
@@ -490,7 +488,7 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
                             <tr key={c.id} className="hover:bg-emerald-50/50">
                               <td className="px-4 py-3 font-medium text-slate-600">{new Date(c.event_date || c.created_at).toLocaleDateString('tr-TR')}</td>
                               <td className="px-4 py-3 text-slate-500 max-w-[220px] truncate" title={c.description}>{c.description}</td>
-                              <td className="px-4 py-3 text-slate-500">{c.beneficiary_name || '-'}</td>
+                              <td className="px-4 py-3 text-slate-500">{(c.beneficiaries || []).map((p: any) => p.name).join(', ') || '-'}</td>
                             </tr>
                           ))}
                         </tbody>
@@ -524,7 +522,7 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
                             <tr key={c.id} className="hover:bg-amber-50/50">
                               <td className="px-4 py-3 font-medium text-slate-600">{new Date(c.event_date || c.created_at).toLocaleDateString('tr-TR')}</td>
                               <td className="px-4 py-3 text-slate-500 max-w-[220px] truncate" title={c.description}>{c.description}</td>
-                              <td className="px-4 py-3 text-slate-500">{c.contributor_name || '-'}</td>
+                              <td className="px-4 py-3 text-slate-500">{(c.contributors || []).map((p: any) => p.name).join(', ') || '-'}</td>
                             </tr>
                           ))}
                         </tbody>

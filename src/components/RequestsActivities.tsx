@@ -14,10 +14,8 @@ interface RequestActivity {
   result_description: string | null;
   event_date: string | null;
   tags: string[] | null;
-  contributor_member_id: string | null;
-  contributor_name: string | null;
-  beneficiary_member_id: string | null;
-  beneficiary_name: string | null;
+  contributors: Party[] | null;
+  beneficiaries: Party[] | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
@@ -27,6 +25,8 @@ interface MemberOption {
   id: string;
   full_name: string;
 }
+
+type Party = { name: string; member_id: string | null };
 
 interface Props {
   isAdmin: boolean;
@@ -40,10 +40,8 @@ type FormData = {
   result_description: string;
   event_date: string;
   tags: string[];
-  contributor_member_id: string | null;
-  contributor_name: string;
-  beneficiary_member_id: string | null;
-  beneficiary_name: string;
+  contributors: Party[];
+  beneficiaries: Party[];
 };
 
 const todayStr = () => new Date().toISOString().split('T')[0];
@@ -55,48 +53,90 @@ const emptyForm: FormData = {
   result_description: '',
   event_date: todayStr(),
   tags: [],
-  contributor_member_id: null,
-  contributor_name: '',
-  beneficiary_member_id: null,
-  beneficiary_name: '',
+  contributors: [],
+  beneficiaries: [],
 };
 
-function MemberAutocomplete({
+function MultiMemberInput({
   label,
   icon,
   value,
   onChange,
   members,
   placeholder,
+  accent,
 }: {
   label: string;
   icon: React.ReactNode;
-  value: string;
-  onChange: (name: string, memberId: string | null) => void;
+  value: Party[];
+  onChange: (parties: Party[]) => void;
   members: MemberOption[];
   placeholder: string;
+  accent: 'emerald' | 'amber';
 }) {
+  const [text, setText] = useState('');
   const [open, setOpen] = useState(false);
 
   const suggestions = useMemo(() => {
-    const term = value.trim().toLocaleLowerCase('tr-TR');
-    if (!term) return members.slice(0, 8);
-    return members
-      .filter(m => m.full_name.toLocaleLowerCase('tr-TR').includes(term))
-      .slice(0, 8);
-  }, [value, members]);
+    const term = text.trim().toLocaleLowerCase('tr-TR');
+    const chosen = new Set(value.map(v => v.name.toLocaleLowerCase('tr-TR')));
+    const base = term
+      ? members.filter(m => m.full_name.toLocaleLowerCase('tr-TR').includes(term))
+      : members;
+    return base.filter(m => !chosen.has(m.full_name.toLocaleLowerCase('tr-TR'))).slice(0, 8);
+  }, [text, members, value]);
+
+  const addParty = (name: string, member_id: string | null) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    if (value.some(v => v.name.toLocaleLowerCase('tr-TR') === trimmed.toLocaleLowerCase('tr-TR'))) {
+      setText('');
+      return;
+    }
+    onChange([...value, { name: trimmed, member_id }]);
+    setText('');
+    setOpen(false);
+  };
+
+  const removeParty = (index: number) => onChange(value.filter((_, i) => i !== index));
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ',') {
+      e.preventDefault();
+      addParty(text, null);
+    }
+  };
+
+  const chipCls = accent === 'emerald'
+    ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+    : 'bg-amber-50 text-amber-700 border-amber-200';
+  const chipBtnCls = accent === 'emerald' ? 'text-emerald-400 hover:text-emerald-700' : 'text-amber-400 hover:text-amber-700';
 
   return (
     <div>
       <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{label}</label>
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {value.map((p, i) => (
+            <span key={i} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border ${chipCls}`}>
+              {p.member_id ? <UserRound size={11} /> : <UserRound size={11} className="opacity-40" />}
+              {p.name}
+              <button type="button" onClick={() => removeParty(i)} className={`ml-1 transition-colors ${chipBtnCls}`}>
+                <X size={12} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <div className="relative">
         <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">{icon}</span>
         <input
           type="text"
-          value={value}
-          onChange={e => { onChange(e.target.value, null); setOpen(true); }}
+          value={text}
+          onChange={e => { setText(e.target.value); setOpen(true); }}
           onFocus={() => setOpen(true)}
           onBlur={() => setTimeout(() => setOpen(false), 200)}
+          onKeyDown={handleKeyDown}
           placeholder={placeholder}
           className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
         />
@@ -106,7 +146,7 @@ function MemberAutocomplete({
               <button
                 key={m.id}
                 type="button"
-                onMouseDown={e => { e.preventDefault(); onChange(m.full_name, m.id); setOpen(false); }}
+                onMouseDown={e => { e.preventDefault(); addParty(m.full_name, m.id); }}
                 className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2"
               >
                 <UserRound size={14} className="text-slate-400" />
@@ -116,7 +156,7 @@ function MemberAutocomplete({
           </div>
         )}
       </div>
-      <p className="text-[11px] text-slate-400 mt-1.5">Uye ismini yazarak listeden secebilir veya serbest isim girebilirsiniz.</p>
+      <p className="text-[11px] text-slate-400 mt-1.5">Uye ismini yazip listeden secin veya serbest isim yazip Enter'a basin. Birden fazla kisi ekleyebilirsiniz.</p>
     </div>
   );
 }
@@ -209,10 +249,8 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
       result_description: rec.result_description || '',
       event_date: rec.event_date || todayStr(),
       tags: rec.tags || [],
-      contributor_member_id: rec.contributor_member_id,
-      contributor_name: rec.contributor_name || '',
-      beneficiary_member_id: rec.beneficiary_member_id,
-      beneficiary_name: rec.beneficiary_name || '',
+      contributors: rec.contributors || [],
+      beneficiaries: rec.beneficiaries || [],
     });
     setEditingId(rec.id);
     setTagInput('');
@@ -259,10 +297,8 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
         result_description: form.type === 'request' ? (form.result_description.trim() || null) : null,
         event_date: form.event_date || null,
         tags: form.tags.length > 0 ? form.tags : [],
-        contributor_name: form.contributor_name.trim() || null,
-        contributor_member_id: form.contributor_member_id,
-        beneficiary_name: form.beneficiary_name.trim() || null,
-        beneficiary_member_id: form.beneficiary_member_id,
+        contributors: form.contributors,
+        beneficiaries: form.beneficiaries,
       };
 
       if (editingId) {
@@ -410,7 +446,7 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
         <span class="date">${r.event_date ? fmtDate(r.event_date) : fmtDate(r.created_at)}</span>
       </div>
       <div class="record-body">${esc(r.description)}</div>
-      ${(r.contributor_name || r.beneficiary_name) ? `<div style="margin-top:8px;font-size:13px;color:#475569;">${r.contributor_name ? `<div><strong>Katki Saglayan:</strong> ${esc(r.contributor_name)}</div>` : ''}${r.beneficiary_name ? `<div><strong>Katki Saglanan:</strong> ${esc(r.beneficiary_name)}</div>` : ''}</div>` : ''}
+      ${((r.contributors || []).length > 0 || (r.beneficiaries || []).length > 0) ? `<div style="margin-top:8px;font-size:13px;color:#475569;">${(r.contributors || []).length > 0 ? `<div><strong>Katki Saglayan:</strong> ${esc((r.contributors || []).map(p => p.name).join(', '))}</div>` : ''}${(r.beneficiaries || []).length > 0 ? `<div><strong>Katki Saglanan:</strong> ${esc((r.beneficiaries || []).map(p => p.name).join(', '))}</div>` : ''}</div>` : ''}
       ${(r.tags || []).length > 0 ? `<div style="margin-top:8px;">${(r.tags || []).map(t => `<span class="tag-badge">${esc(t)}</span>`).join('')}</div>` : ''}
       ${r.result_description ? `<div class="result-box"><div class="result-label">Sonuc Aciklamasi</div><p>${esc(r.result_description)}</p></div>` : ''}
     </div>`).join('\n')}
@@ -423,7 +459,7 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
         <span class="date">${r.event_date ? fmtDate(r.event_date) : fmtDate(r.created_at)}</span>
       </div>
       <div class="record-body">${esc(r.description)}</div>
-      ${(r.contributor_name || r.beneficiary_name) ? `<div style="margin-top:8px;font-size:13px;color:#475569;">${r.contributor_name ? `<div><strong>Katki Saglayan:</strong> ${esc(r.contributor_name)}</div>` : ''}${r.beneficiary_name ? `<div><strong>Katki Saglanan:</strong> ${esc(r.beneficiary_name)}</div>` : ''}</div>` : ''}
+      ${((r.contributors || []).length > 0 || (r.beneficiaries || []).length > 0) ? `<div style="margin-top:8px;font-size:13px;color:#475569;">${(r.contributors || []).length > 0 ? `<div><strong>Katki Saglayan:</strong> ${esc((r.contributors || []).map(p => p.name).join(', '))}</div>` : ''}${(r.beneficiaries || []).length > 0 ? `<div><strong>Katki Saglanan:</strong> ${esc((r.beneficiaries || []).map(p => p.name).join(', '))}</div>` : ''}</div>` : ''}
       ${(r.tags || []).length > 0 ? `<div style="margin-top:8px;">${(r.tags || []).map(t => `<span class="tag-badge">${esc(t)}</span>`).join('')}</div>` : ''}
     </div>`).join('\n')}
   </div>` : ''}
@@ -676,18 +712,18 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
                             </span>
                           </div>
                           <p className="mt-2 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{rec.description}</p>
-                          {(rec.contributor_name || rec.beneficiary_name) && (
+                          {((rec.contributors || []).length > 0 || (rec.beneficiaries || []).length > 0) && (
                             <div className="mt-2 flex flex-wrap gap-1.5">
-                              {rec.contributor_name && (
+                              {(rec.contributors || []).length > 0 && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[11px] font-semibold border border-emerald-100">
                                   <HandHeart size={11} />
-                                  Saglayan: {rec.contributor_name}
+                                  Saglayan: {(rec.contributors || []).map(p => p.name).join(', ')}
                                 </span>
                               )}
-                              {rec.beneficiary_name && (
+                              {(rec.beneficiaries || []).length > 0 && (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md text-[11px] font-semibold border border-amber-100">
                                   <HeartHandshake size={11} />
-                                  Saglanan: {rec.beneficiary_name}
+                                  Saglanan: {(rec.beneficiaries || []).map(p => p.name).join(', ')}
                                 </span>
                               )}
                             </div>
@@ -825,21 +861,23 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
 
               {/* Contributor & Beneficiary */}
               <div className="grid grid-cols-1 gap-5">
-                <MemberAutocomplete
+                <MultiMemberInput
                   label="Katki Saglayan"
                   icon={<HandHeart size={16} />}
-                  value={form.contributor_name}
-                  onChange={(name, id) => setForm({ ...form, contributor_name: name, contributor_member_id: id })}
+                  value={form.contributors}
+                  onChange={parties => setForm({ ...form, contributors: parties })}
                   members={membersList}
                   placeholder="Katki saglayan kisiyi girin..."
+                  accent="emerald"
                 />
-                <MemberAutocomplete
+                <MultiMemberInput
                   label="Katki Saglanan"
                   icon={<HeartHandshake size={16} />}
-                  value={form.beneficiary_name}
-                  onChange={(name, id) => setForm({ ...form, beneficiary_name: name, beneficiary_member_id: id })}
+                  value={form.beneficiaries}
+                  onChange={parties => setForm({ ...form, beneficiaries: parties })}
                   members={membersList}
                   placeholder="Katki saglanan kisiyi girin..."
+                  accent="amber"
                 />
               </div>
 
