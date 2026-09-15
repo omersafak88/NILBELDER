@@ -1,6 +1,6 @@
 // project/src/components/MemberLedger.tsx
-import { useState, useEffect } from 'react';
-import { BookOpen, Search, X, User, TrendingUp, TrendingDown, DollarSign, Receipt, MousePointerClick, HandHeart, HeartHandshake } from 'lucide-react';
+import { useState, useEffect, Fragment } from 'react';
+import { BookOpen, Search, X, User, TrendingUp, TrendingDown, DollarSign, Receipt, MousePointerClick, HandHeart, HeartHandshake, ChevronDown } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface MemberSummary {
@@ -17,6 +17,36 @@ interface MemberSummary {
 
 type TabType = 'accrual' | 'payment' | 'donation' | 'expense' | 'provided' | 'received';
 
+function ContribDetail({ c, colSpan }: { c: any; colSpan: number }) {
+  return (
+    <tr>
+      <td colSpan={colSpan} className="px-4 pb-4 pt-0 bg-slate-50/60">
+        <div className="rounded-xl border border-slate-200 bg-white p-4 space-y-3">
+          <div>
+            <p className="text-[10px] font-bold uppercase text-slate-400 mb-1">Açıklama</p>
+            <p className="text-slate-600 whitespace-pre-wrap leading-relaxed">{c.description || '-'}</p>
+          </div>
+          {c.type === 'request' && (
+            <div className="pt-3 border-t border-slate-100">
+              <p className="text-[10px] font-bold uppercase text-slate-400 mb-1.5">Sonuç</p>
+              {c.result_status ? (
+                <span className={`inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold ${c.result_status === 'positive' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                  {c.result_status === 'positive' ? 'OLUMLU' : 'OLUMSUZ'}
+                </span>
+              ) : (
+                <span className="inline-flex items-center px-2 py-1 rounded-md text-[10px] font-bold bg-amber-100 text-amber-700">BEKLEMEDE</span>
+              )}
+              {c.result_description && (
+                <p className="text-slate-600 mt-2 whitespace-pre-wrap leading-relaxed">{c.result_description}</p>
+              )}
+            </div>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+}
+
 export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
   const [members, setMembers] = useState<MemberSummary[]>([]);
   const [allDues, setAllDues] = useState<any[]>([]); 
@@ -29,6 +59,7 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
   // Seçili üye ve aktif sekme durumu
   const [selectedMember, setSelectedMember] = useState<MemberSummary | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('accrual');
+  const [expandedContribId, setExpandedContribId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isAdmin) loadMemberLedger();
@@ -134,6 +165,7 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
   const handleOpenDetail = (member: MemberSummary) => {
     setSelectedMember(member);
     setActiveTab('accrual'); // Her açılışta varsayılan olarak tahakkuku göster
+    setExpandedContribId(null);
   };
 
   const filtered = members.filter(m => m.full_name.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -292,7 +324,7 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
 
                 {/* 5. Sağladığı Katkı Kartı */}
                 <button
-                  onClick={() => setActiveTab('provided')}
+                  onClick={() => { setActiveTab('provided'); setExpandedContribId(null); }}
                   className={`p-3 rounded-xl border text-left transition-all ${activeTab === 'provided' ? 'bg-emerald-700 text-white ring-2 ring-emerald-400 ring-offset-2 scale-105 shadow-lg' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-100'}`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -304,7 +336,7 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
 
                 {/* 6. Sağlanan Katkı Kartı */}
                 <button
-                  onClick={() => setActiveTab('received')}
+                  onClick={() => { setActiveTab('received'); setExpandedContribId(null); }}
                   className={`p-3 rounded-xl border text-left transition-all ${activeTab === 'received' ? 'bg-amber-600 text-white ring-2 ring-amber-400 ring-offset-2 scale-105 shadow-lg' : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-100'}`}
                 >
                   <div className="flex items-center justify-between mb-1">
@@ -485,11 +517,22 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
                           {providedList.length === 0 ? (
                             <tr><td colSpan={3} className="px-4 py-8 text-emerald-400/70 text-center">Kayıt bulunamadı.</td></tr>
                           ) : providedList.map(c => (
-                            <tr key={c.id} className="hover:bg-emerald-50/50">
-                              <td className="px-4 py-3 font-medium text-slate-600">{new Date(c.event_date || c.created_at).toLocaleDateString('tr-TR')}</td>
-                              <td className="px-4 py-3 text-slate-500 max-w-[220px] truncate" title={c.description}>{c.description}</td>
-                              <td className="px-4 py-3 text-slate-500">{(c.beneficiaries || []).map((p: any) => p.name).join(', ') || '-'}</td>
-                            </tr>
+                            <Fragment key={c.id}>
+                              <tr
+                                onClick={() => setExpandedContribId(expandedContribId === c.id ? null : c.id)}
+                                className="hover:bg-emerald-50/50 cursor-pointer"
+                              >
+                                <td className="px-4 py-3 font-medium text-slate-600">{new Date(c.event_date || c.created_at).toLocaleDateString('tr-TR')}</td>
+                                <td className="px-4 py-3 text-slate-500">
+                                  <div className="flex items-center gap-1.5">
+                                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform flex-shrink-0 ${expandedContribId === c.id ? 'rotate-180' : ''}`} />
+                                    <span className={`max-w-[200px] ${expandedContribId === c.id ? '' : 'truncate'}`} title={c.description}>{c.description}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-slate-500">{(c.beneficiaries || []).map((p: any) => p.name).join(', ') || '-'}</td>
+                              </tr>
+                              {expandedContribId === c.id && <ContribDetail c={c} colSpan={3} />}
+                            </Fragment>
                           ))}
                         </tbody>
                       </table>
@@ -519,11 +562,22 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
                           {receivedContribList.length === 0 ? (
                             <tr><td colSpan={3} className="px-4 py-8 text-amber-400/70 text-center">Kayıt bulunamadı.</td></tr>
                           ) : receivedContribList.map(c => (
-                            <tr key={c.id} className="hover:bg-amber-50/50">
-                              <td className="px-4 py-3 font-medium text-slate-600">{new Date(c.event_date || c.created_at).toLocaleDateString('tr-TR')}</td>
-                              <td className="px-4 py-3 text-slate-500 max-w-[220px] truncate" title={c.description}>{c.description}</td>
-                              <td className="px-4 py-3 text-slate-500">{(c.contributors || []).map((p: any) => p.name).join(', ') || '-'}</td>
-                            </tr>
+                            <Fragment key={c.id}>
+                              <tr
+                                onClick={() => setExpandedContribId(expandedContribId === c.id ? null : c.id)}
+                                className="hover:bg-amber-50/50 cursor-pointer"
+                              >
+                                <td className="px-4 py-3 font-medium text-slate-600">{new Date(c.event_date || c.created_at).toLocaleDateString('tr-TR')}</td>
+                                <td className="px-4 py-3 text-slate-500">
+                                  <div className="flex items-center gap-1.5">
+                                    <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform flex-shrink-0 ${expandedContribId === c.id ? 'rotate-180' : ''}`} />
+                                    <span className={`max-w-[200px] ${expandedContribId === c.id ? '' : 'truncate'}`} title={c.description}>{c.description}</span>
+                                  </div>
+                                </td>
+                                <td className="px-4 py-3 text-slate-500">{(c.contributors || []).map((p: any) => p.name).join(', ') || '-'}</td>
+                              </tr>
+                              {expandedContribId === c.id && <ContribDetail c={c} colSpan={3} />}
+                            </Fragment>
                           ))}
                         </tbody>
                       </table>
