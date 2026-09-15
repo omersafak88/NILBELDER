@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Plus, X, FileText, ClipboardList, CheckCircle2, XCircle,
-  Pencil, Trash2, Calendar, Filter, Search, Download, Tag
+  Pencil, Trash2, Calendar, Filter, Search, Download, Tag,
+  HandHeart, UserRound, HeartHandshake
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -13,9 +14,18 @@ interface RequestActivity {
   result_description: string | null;
   event_date: string | null;
   tags: string[] | null;
+  contributor_member_id: string | null;
+  contributor_name: string | null;
+  beneficiary_member_id: string | null;
+  beneficiary_name: string | null;
   created_by: string | null;
   created_at: string;
   updated_at: string;
+}
+
+interface MemberOption {
+  id: string;
+  full_name: string;
 }
 
 interface Props {
@@ -30,6 +40,10 @@ type FormData = {
   result_description: string;
   event_date: string;
   tags: string[];
+  contributor_member_id: string | null;
+  contributor_name: string;
+  beneficiary_member_id: string | null;
+  beneficiary_name: string;
 };
 
 const todayStr = () => new Date().toISOString().split('T')[0];
@@ -41,10 +55,75 @@ const emptyForm: FormData = {
   result_description: '',
   event_date: todayStr(),
   tags: [],
+  contributor_member_id: null,
+  contributor_name: '',
+  beneficiary_member_id: null,
+  beneficiary_name: '',
 };
+
+function MemberAutocomplete({
+  label,
+  icon,
+  value,
+  onChange,
+  members,
+  placeholder,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  value: string;
+  onChange: (name: string, memberId: string | null) => void;
+  members: MemberOption[];
+  placeholder: string;
+}) {
+  const [open, setOpen] = useState(false);
+
+  const suggestions = useMemo(() => {
+    const term = value.trim().toLocaleLowerCase('tr-TR');
+    if (!term) return members.slice(0, 8);
+    return members
+      .filter(m => m.full_name.toLocaleLowerCase('tr-TR').includes(term))
+      .slice(0, 8);
+  }, [value, members]);
+
+  return (
+    <div>
+      <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">{label}</label>
+      <div className="relative">
+        <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">{icon}</span>
+        <input
+          type="text"
+          value={value}
+          onChange={e => { onChange(e.target.value, null); setOpen(true); }}
+          onFocus={() => setOpen(true)}
+          onBlur={() => setTimeout(() => setOpen(false), 200)}
+          placeholder={placeholder}
+          className="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+        />
+        {open && suggestions.length > 0 && (
+          <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-lg z-20 max-h-48 overflow-y-auto">
+            {suggestions.map(m => (
+              <button
+                key={m.id}
+                type="button"
+                onMouseDown={e => { e.preventDefault(); onChange(m.full_name, m.id); setOpen(false); }}
+                className="w-full text-left px-4 py-2.5 text-sm text-slate-700 hover:bg-blue-50 hover:text-blue-700 transition-colors flex items-center gap-2"
+              >
+                <UserRound size={14} className="text-slate-400" />
+                {m.full_name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <p className="text-[11px] text-slate-400 mt-1.5">Uye ismini yazarak listeden secebilir veya serbest isim girebilirsiniz.</p>
+    </div>
+  );
+}
 
 export default function RequestsActivities({ isAdmin, currentMemberId }: Props) {
   const [records, setRecords] = useState<RequestActivity[]>([]);
+  const [membersList, setMembersList] = useState<MemberOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -60,7 +139,17 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
 
   useEffect(() => {
     loadRecords();
+    loadMembers();
   }, []);
+
+  const loadMembers = async () => {
+    const { data, error } = await supabase
+      .from('members')
+      .select('id, full_name')
+      .eq('is_active', true)
+      .order('full_name');
+    if (!error && data) setMembersList(data);
+  };
 
   const loadRecords = async () => {
     try {
@@ -120,6 +209,10 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
       result_description: rec.result_description || '',
       event_date: rec.event_date || todayStr(),
       tags: rec.tags || [],
+      contributor_member_id: rec.contributor_member_id,
+      contributor_name: rec.contributor_name || '',
+      beneficiary_member_id: rec.beneficiary_member_id,
+      beneficiary_name: rec.beneficiary_name || '',
     });
     setEditingId(rec.id);
     setTagInput('');
@@ -166,6 +259,10 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
         result_description: form.type === 'request' ? (form.result_description.trim() || null) : null,
         event_date: form.event_date || null,
         tags: form.tags.length > 0 ? form.tags : [],
+        contributor_name: form.contributor_name.trim() || null,
+        contributor_member_id: form.contributor_member_id,
+        beneficiary_name: form.beneficiary_name.trim() || null,
+        beneficiary_member_id: form.beneficiary_member_id,
       };
 
       if (editingId) {
@@ -313,6 +410,7 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
         <span class="date">${r.event_date ? fmtDate(r.event_date) : fmtDate(r.created_at)}</span>
       </div>
       <div class="record-body">${esc(r.description)}</div>
+      ${(r.contributor_name || r.beneficiary_name) ? `<div style="margin-top:8px;font-size:13px;color:#475569;">${r.contributor_name ? `<div><strong>Katki Saglayan:</strong> ${esc(r.contributor_name)}</div>` : ''}${r.beneficiary_name ? `<div><strong>Katki Saglanan:</strong> ${esc(r.beneficiary_name)}</div>` : ''}</div>` : ''}
       ${(r.tags || []).length > 0 ? `<div style="margin-top:8px;">${(r.tags || []).map(t => `<span class="tag-badge">${esc(t)}</span>`).join('')}</div>` : ''}
       ${r.result_description ? `<div class="result-box"><div class="result-label">Sonuc Aciklamasi</div><p>${esc(r.result_description)}</p></div>` : ''}
     </div>`).join('\n')}
@@ -325,6 +423,7 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
         <span class="date">${r.event_date ? fmtDate(r.event_date) : fmtDate(r.created_at)}</span>
       </div>
       <div class="record-body">${esc(r.description)}</div>
+      ${(r.contributor_name || r.beneficiary_name) ? `<div style="margin-top:8px;font-size:13px;color:#475569;">${r.contributor_name ? `<div><strong>Katki Saglayan:</strong> ${esc(r.contributor_name)}</div>` : ''}${r.beneficiary_name ? `<div><strong>Katki Saglanan:</strong> ${esc(r.beneficiary_name)}</div>` : ''}</div>` : ''}
       ${(r.tags || []).length > 0 ? `<div style="margin-top:8px;">${(r.tags || []).map(t => `<span class="tag-badge">${esc(t)}</span>`).join('')}</div>` : ''}
     </div>`).join('\n')}
   </div>` : ''}
@@ -577,6 +676,22 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
                             </span>
                           </div>
                           <p className="mt-2 text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{rec.description}</p>
+                          {(rec.contributor_name || rec.beneficiary_name) && (
+                            <div className="mt-2 flex flex-wrap gap-1.5">
+                              {rec.contributor_name && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded-md text-[11px] font-semibold border border-emerald-100">
+                                  <HandHeart size={11} />
+                                  Saglayan: {rec.contributor_name}
+                                </span>
+                              )}
+                              {rec.beneficiary_name && (
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-amber-50 text-amber-700 rounded-md text-[11px] font-semibold border border-amber-100">
+                                  <HeartHandshake size={11} />
+                                  Saglanan: {rec.beneficiary_name}
+                                </span>
+                              )}
+                            </div>
+                          )}
                           {(rec.tags || []).length > 0 && (
                             <div className="mt-2 flex flex-wrap gap-1.5">
                               {(rec.tags || []).map((t, i) => (
@@ -705,6 +820,26 @@ export default function RequestsActivities({ isAdmin, currentMemberId }: Props) 
                   rows={4}
                   placeholder={form.type === 'activity' ? 'Faaliyet detaylarini yaziniz...' : 'Talep detaylarini yaziniz...'}
                   className="w-full px-4 py-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none resize-none transition-all"
+                />
+              </div>
+
+              {/* Contributor & Beneficiary */}
+              <div className="grid grid-cols-1 gap-5">
+                <MemberAutocomplete
+                  label="Katki Saglayan"
+                  icon={<HandHeart size={16} />}
+                  value={form.contributor_name}
+                  onChange={(name, id) => setForm({ ...form, contributor_name: name, contributor_member_id: id })}
+                  members={membersList}
+                  placeholder="Katki saglayan kisiyi girin..."
+                />
+                <MemberAutocomplete
+                  label="Katki Saglanan"
+                  icon={<HeartHandshake size={16} />}
+                  value={form.beneficiary_name}
+                  onChange={(name, id) => setForm({ ...form, beneficiary_name: name, beneficiary_member_id: id })}
+                  members={membersList}
+                  placeholder="Katki saglanan kisiyi girin..."
                 />
               </div>
 

@@ -1,6 +1,6 @@
 // project/src/components/MemberLedger.tsx
 import { useState, useEffect } from 'react';
-import { BookOpen, Search, X, User, TrendingUp, TrendingDown, DollarSign, Receipt, MousePointerClick } from 'lucide-react';
+import { BookOpen, Search, X, User, TrendingUp, TrendingDown, DollarSign, Receipt, MousePointerClick, HandHeart, HeartHandshake } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface MemberSummary {
@@ -11,14 +11,17 @@ interface MemberSummary {
   totalDuesOwed: number;
   totalDonationsMade: number;
   totalSocialAidReceived: number;
+  contributionsProvided: number;
+  contributionsReceived: number;
 }
 
-type TabType = 'accrual' | 'payment' | 'donation' | 'expense';
+type TabType = 'accrual' | 'payment' | 'donation' | 'expense' | 'provided' | 'received';
 
 export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
   const [members, setMembers] = useState<MemberSummary[]>([]);
   const [allDues, setAllDues] = useState<any[]>([]); 
   const [allTransactions, setAllTransactions] = useState<any[]>([]); 
+  const [allContributions, setAllContributions] = useState<any[]>([]); 
   const [categories, setCategories] = useState<any[]>([]); 
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -65,11 +68,13 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
 
     const duesData = await fetchAllFromTable('dues', '*');
     const transData = await fetchAllFromTable('transactions', '*');
+    const contribData = await fetchAllFromTable('requests_activities', '*');
 
     if (!membersRes.data) return setLoading(false);
     
     setAllDues(duesData);
     setAllTransactions(transData);
+    setAllContributions(contribData);
     if (categoriesRes.data) setCategories(categoriesRes.data);
 
     const aidatCatId = categoriesRes.data?.find(c => c.name === 'Aidat')?.id;
@@ -79,6 +84,17 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
     const paidTotalMap = new Map<string, number>();
     const donationTotalMap = new Map<string, number>();
     const expenseTotalMap = new Map<string, number>();
+    const providedCountMap = new Map<string, number>();
+    const receivedCountMap = new Map<string, number>();
+
+    contribData.forEach(c => {
+      if (c.contributor_member_id) {
+        providedCountMap.set(c.contributor_member_id, (providedCountMap.get(c.contributor_member_id) || 0) + 1);
+      }
+      if (c.beneficiary_member_id) {
+        receivedCountMap.set(c.beneficiary_member_id, (receivedCountMap.get(c.beneficiary_member_id) || 0) + 1);
+      }
+    });
 
     duesData.forEach(d => {
       duesTotalMap.set(d.member_id, (duesTotalMap.get(d.member_id) || 0) + Number(d.amount || 0));
@@ -107,7 +123,9 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
         totalDuesPaid: paid,
         totalDuesOwed: accrued - paid,
         totalDonationsMade: donationTotalMap.get(m.id) || 0,
-        totalSocialAidReceived: expenseTotalMap.get(m.id) || 0
+        totalSocialAidReceived: expenseTotalMap.get(m.id) || 0,
+        contributionsProvided: providedCountMap.get(m.id) || 0,
+        contributionsReceived: receivedCountMap.get(m.id) || 0
       };
     });
 
@@ -140,6 +158,17 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
   const donationsList = memberTransactions.filter(t => t.type === 'income' && t.category_id === bagisCatId);
   const receivedAidList = memberTransactions.filter(t => t.type === 'expense');
 
+  const providedList = selectedMember
+    ? allContributions
+        .filter(c => c.contributor_member_id === selectedMember.id)
+        .sort((a, b) => new Date(b.event_date || b.created_at).getTime() - new Date(a.event_date || a.created_at).getTime())
+    : [];
+  const receivedContribList = selectedMember
+    ? allContributions
+        .filter(c => c.beneficiary_member_id === selectedMember.id)
+        .sort((a, b) => new Date(b.event_date || b.created_at).getTime() - new Date(a.event_date || a.created_at).getTime())
+    : [];
+
   if (!isAdmin) return <div className="p-8 text-center text-slate-500 font-medium">Yetkiniz yok.</div>;
 
   return (
@@ -167,12 +196,14 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
                 <th className="px-6 py-4 text-right">Borç</th>
                 <th className="px-6 py-4 text-right">Bağış</th>
                 <th className="px-6 py-4 text-right">Yardım</th>
+                <th className="px-6 py-4 text-right">Sağladığı Katkı</th>
+                <th className="px-6 py-4 text-right">Sağlanan Katkı</th>
                 <th className="px-6 py-4 text-center">İşlem</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={7} className="py-12 text-center text-slate-400 animate-pulse">Veritabanı taranıyor...</td></tr>
+                <tr><td colSpan={9} className="py-12 text-center text-slate-400 animate-pulse">Veritabanı taranıyor...</td></tr>
               ) : filtered.map(m => (
                 <tr key={m.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 font-bold text-slate-800">{m.full_name}</td>
@@ -181,6 +212,8 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
                   <td className={`px-6 py-4 text-right font-black ${m.totalDuesOwed > 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{m.totalDuesOwed.toFixed(2)} TL</td>
                   <td className="px-6 py-4 text-right text-blue-600 font-bold">{m.totalDonationsMade.toFixed(2)} TL</td>
                   <td className="px-6 py-4 text-right text-orange-600 font-bold">{m.totalSocialAidReceived.toFixed(2)} TL</td>
+                  <td className="px-6 py-4 text-right font-bold text-emerald-700">{m.contributionsProvided} adet</td>
+                  <td className="px-6 py-4 text-right font-bold text-amber-700">{m.contributionsReceived} adet</td>
                   <td className="px-6 py-4 text-center">
                     <button onClick={() => handleOpenDetail(m)} className="px-3 py-1 bg-slate-100 text-slate-700 rounded-lg hover:bg-slate-800 hover:text-white text-xs font-bold transition-colors">DETAY</button>
                   </td>
@@ -210,7 +243,7 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
             <div className="p-6 overflow-y-auto space-y-6 flex-1">
               
               {/* Sekme Butonları (Kartlar) */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {/* 1. Tahakkuk Kartı */}
                 <button 
                   onClick={() => setActiveTab('accrual')}
@@ -257,6 +290,30 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
                     {activeTab === 'expense' && <TrendingDown className="w-3 h-3 text-orange-100" />}
                   </div>
                   <p className="text-sm font-black">{selectedMember.totalSocialAidReceived.toFixed(2)} TL</p>
+                </button>
+
+                {/* 5. Sağladığı Katkı Kartı */}
+                <button
+                  onClick={() => setActiveTab('provided')}
+                  className={`p-3 rounded-xl border text-left transition-all ${activeTab === 'provided' ? 'bg-emerald-700 text-white ring-2 ring-emerald-400 ring-offset-2 scale-105 shadow-lg' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-100'}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <p className={`text-[10px] font-bold uppercase ${activeTab === 'provided' ? 'text-emerald-100' : 'text-emerald-600'}`}>Sağladığı Katkı</p>
+                    {activeTab === 'provided' && <HandHeart className="w-3 h-3 text-emerald-100" />}
+                  </div>
+                  <p className="text-sm font-black">{selectedMember.contributionsProvided} adet</p>
+                </button>
+
+                {/* 6. Sağlanan Katkı Kartı */}
+                <button
+                  onClick={() => setActiveTab('received')}
+                  className={`p-3 rounded-xl border text-left transition-all ${activeTab === 'received' ? 'bg-amber-600 text-white ring-2 ring-amber-400 ring-offset-2 scale-105 shadow-lg' : 'bg-amber-50 hover:bg-amber-100 text-amber-800 border-amber-100'}`}
+                >
+                  <div className="flex items-center justify-between mb-1">
+                    <p className={`text-[10px] font-bold uppercase ${activeTab === 'received' ? 'text-amber-100' : 'text-amber-600'}`}>Sağlanan Katkı</p>
+                    {activeTab === 'received' && <HeartHandshake className="w-3 h-3 text-amber-100" />}
+                  </div>
+                  <p className="text-sm font-black">{selectedMember.contributionsReceived} adet</p>
                 </button>
               </div>
 
@@ -400,6 +457,74 @@ export default function MemberLedger({ isAdmin }: { isAdmin: boolean }) {
                               <td className="px-4 py-3 font-medium text-slate-600">{new Date(t.transaction_date).toLocaleDateString('tr-TR')}</td>
                               <td className="px-4 py-3 text-slate-500 max-w-[200px] truncate" title={t.description}>{t.description || 'Sosyal Yardım'}</td>
                               <td className="px-4 py-3 text-right font-black text-orange-600">{t.amount.toFixed(2)} TL</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* 5. SAĞLADIĞI KATKI LİSTESİ */}
+                {activeTab === 'provided' && (
+                  <div>
+                    <div className="px-4 py-3 bg-emerald-50 border-b border-emerald-100 flex items-center justify-between">
+                      <h4 className="font-bold text-emerald-700 text-sm uppercase flex items-center gap-2">
+                        <HandHeart className="w-4 h-4" /> Sağladığı Katkılar
+                      </h4>
+                      <span className="text-xs font-bold text-emerald-600 opacity-70">{providedList.length} Kayıt</span>
+                    </div>
+                    <div className="overflow-y-auto max-h-[300px]">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-emerald-50 text-emerald-600 font-bold uppercase sticky top-0 shadow-sm z-10">
+                          <tr>
+                            <th className="px-4 py-3">Tarih</th>
+                            <th className="px-4 py-3">Açıklama</th>
+                            <th className="px-4 py-3">Katkı Sağlanan</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-emerald-50">
+                          {providedList.length === 0 ? (
+                            <tr><td colSpan={3} className="px-4 py-8 text-emerald-400/70 text-center">Kayıt bulunamadı.</td></tr>
+                          ) : providedList.map(c => (
+                            <tr key={c.id} className="hover:bg-emerald-50/50">
+                              <td className="px-4 py-3 font-medium text-slate-600">{new Date(c.event_date || c.created_at).toLocaleDateString('tr-TR')}</td>
+                              <td className="px-4 py-3 text-slate-500 max-w-[220px] truncate" title={c.description}>{c.description}</td>
+                              <td className="px-4 py-3 text-slate-500">{c.beneficiary_name || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* 6. SAĞLANAN KATKI LİSTESİ */}
+                {activeTab === 'received' && (
+                  <div>
+                    <div className="px-4 py-3 bg-amber-50 border-b border-amber-100 flex items-center justify-between">
+                      <h4 className="font-bold text-amber-700 text-sm uppercase flex items-center gap-2">
+                        <HeartHandshake className="w-4 h-4" /> Dernek Tarafından Sağlanan Katkılar
+                      </h4>
+                      <span className="text-xs font-bold text-amber-600 opacity-70">{receivedContribList.length} Kayıt</span>
+                    </div>
+                    <div className="overflow-y-auto max-h-[300px]">
+                      <table className="w-full text-xs text-left">
+                        <thead className="bg-amber-50 text-amber-600 font-bold uppercase sticky top-0 shadow-sm z-10">
+                          <tr>
+                            <th className="px-4 py-3">Tarih</th>
+                            <th className="px-4 py-3">Açıklama</th>
+                            <th className="px-4 py-3">Katkı Sağlayan</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-amber-50">
+                          {receivedContribList.length === 0 ? (
+                            <tr><td colSpan={3} className="px-4 py-8 text-amber-400/70 text-center">Kayıt bulunamadı.</td></tr>
+                          ) : receivedContribList.map(c => (
+                            <tr key={c.id} className="hover:bg-amber-50/50">
+                              <td className="px-4 py-3 font-medium text-slate-600">{new Date(c.event_date || c.created_at).toLocaleDateString('tr-TR')}</td>
+                              <td className="px-4 py-3 text-slate-500 max-w-[220px] truncate" title={c.description}>{c.description}</td>
+                              <td className="px-4 py-3 text-slate-500">{c.contributor_name || '-'}</td>
                             </tr>
                           ))}
                         </tbody>
